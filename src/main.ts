@@ -5,4 +5,10 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   await app.listen(process.env.PORT ?? 3000);
 }
-bootstrap();
+
+// bootstrap(); // Verificar si es necesario hacer el wrapp
+
+bootstrap().catch((err) => {
+  console.error('Error starting the app: \n', err);
+  process.exit(1);
+});
