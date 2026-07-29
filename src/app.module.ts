@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DataSource } from 'typeorm';
 
 import { AuthModule } from './auth/auth.module';
 import { NotificationsModule } from './notifications/notifications.module';
@@ -8,9 +9,6 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { AppController } from './app.controller';
 
 import { AppService } from './app.service';
-
-import { User } from './entities/user.entity';
-import { Notification } from './entities/notification.entity';
 
 import configuration from './config/configuration' 
 
@@ -30,8 +28,8 @@ import configuration from './config/configuration'
         database: configService.get<string>('database.name'),
         username: configService.get<string>('database.user'),
         password: configService.get<string>('database.password'),
-        entities: [User, Notification],
         synchronize: false,
+        autoLoadEntities: true
       })
     }),
     AuthModule,
@@ -40,4 +38,6 @@ import configuration from './config/configuration'
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule {
+  constructor(private dataSource: DataSource) {}
+}
