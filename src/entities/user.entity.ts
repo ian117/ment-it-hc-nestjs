@@ -29,5 +29,3 @@ export class User {
   @UpdateDateColumn()
   updatedAt!: Date;
 }
-
-// CREATE EXTENSION IF NOT EXISTS "uuid-ossp";   TODO Usar esto en la primera migracion
