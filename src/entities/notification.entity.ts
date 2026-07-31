@@ -10,17 +10,31 @@ import {
 
 import { User } from './user.entity';
 
+export enum NotificationChannelEnum {
+  EMAIL = 'email',
+  SMS = 'sms',
+  PUSH = 'push',
+}
+
+export enum NotificationStatusEnum {
+  PENDING = 'pending',
+  SENT = 'sent',
+  FAILED = 'failed',
+}
+
+
+
 @Entity()
 export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column()
-  userId!: string; // ← el ID plano, para insertar directo
+  userId!: string;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
-  user!: User;
+  user?: User;
 
   @Column()
   title!: string;
@@ -28,17 +42,17 @@ export class Notification {
   @Column()
   content!: string;
 
-  @Column()
-  channel!: string;
+  @Column({ type: 'enum', enum: NotificationChannelEnum })
+  channel!: NotificationChannelEnum;
 
-  @Column()
-  status!: string;
+  @Column({ type: 'enum', enum: NotificationStatusEnum })
+  status!: NotificationStatusEnum;
 
-  @Column()
-  sentAt!: string;
+  @Column({ type: 'timestamp',nullable: true })
+  sentAt!: Date | null;
 
-  @Column()
-  metadata!: string;
+  @Column({ type: 'json', nullable: true })
+  metadata!: Record<string, any> | null;
 
   @CreateDateColumn()
   createdAt!: Date;
