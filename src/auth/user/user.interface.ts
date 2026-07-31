@@ -1,6 +1,8 @@
+import { User } from "src/entities/user.entity";
+
 export interface UserInterface {
-    userExist(email): boolean
-    signUp(email, password)
-    matchEmailPassword(email, password): boolean  //?
-    generatePasswordResetToken(email) //?
+  userExist(email: string): Promise<boolean>;
+  signUp(email: string, password: string): Promise<User>;
+  matchEmailPassword(email: string, password: string): Promise<boolean>;
+  generatePasswordResetToken(email: string): Promise<string>;
 }
