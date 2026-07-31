@@ -10,4 +10,6 @@ export class CreateUserDto {
     password!: string;
 }
 
+export class LoginDto extends CreateUserDto {}
+
 export class UpdateUserDto extends PartialType(CreateUserDto) {}

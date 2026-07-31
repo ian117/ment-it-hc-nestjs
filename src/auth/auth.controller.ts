@@ -1,16 +1,19 @@
-import { Controller, Get, Post } from '@nestjs/common';
+import { Body, Controller, Get, Post } from '@nestjs/common';
+import { CreateUserDto, LoginDto } from './dto/user.dto';
 
 @Controller('auth')
 export class AuthController {
     
-    @Post('register')
-    register(){
-        return `Registered within the App`
+    @Post('signup')
+    signup(@Body() body: CreateUserDto){
+        // Se envian al servicio
+        return body.email
     }
 
     @Post('login')
-    login(){
-        return `Loggued into ur account`
+    login(@Body() body: LoginDto){
+        // Se envian al servicio
+        return body.email
     }
 
     @Get('me')
