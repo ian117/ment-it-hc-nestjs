@@ -29,6 +29,7 @@ import configuration from './config/configuration'
         username: configService.get<string>('database.user'),
         password: configService.get<string>('database.password'),
         synchronize: false,
+        entities: [__dirname + '/entities/**/*.entity{.ts,.js}'],
         autoLoadEntities: true
       })
     }),
