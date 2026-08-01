@@ -26,7 +26,7 @@ export class UserService implements UserInterface {
   async validateUser(email: string, password: string): Promise<User | null> {
     const user = await this.userRepo.findOne({
       where: { email },
-      select: { id: true, email: true },
+      select: { id: true, email: true, password: true },
     });
     if (!user) return null;
 
