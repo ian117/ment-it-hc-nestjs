@@ -13,3 +13,17 @@ export class CreateUserDto {
 export class LoginDto extends CreateUserDto {}
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {}
+
+export class RequestResetDto {
+  @IsEmail()
+  email!: string;
+}
+
+export class ConfirmResetDto {
+  @IsString()
+  token!: string;
+
+  @IsString()
+  @MinLength(8)
+  newPassword!: string;
+}

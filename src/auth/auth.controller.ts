@@ -1,12 +1,16 @@
-import { Body, Controller, Get, Post, UnauthorizedException } from '@nestjs/common';
-import { CreateUserDto, LoginDto } from './dto/user.dto';
+import { Body, Controller, Get, NotFoundException, Post, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { ConfirmResetDto, CreateUserDto, LoginDto, RequestResetDto } from './dto/user.dto';
 import { UserService } from './user/user.service';
+import { JwtAuthGuard } from './user/jwt-auth.guard';
+import { CurrentUser } from 'src/decorators/current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
     
     constructor(
         private readonly userService: UserService,
+        private readonly jwtService: JwtService
     ){}
 
     @Post('signup')
@@ -17,20 +21,30 @@ export class AuthController {
 
     @Post('login')
     async login(@Body() body: LoginDto) {
-        const isValid = await this.userService.matchEmailPassword(body.email, body. password);
-        if (!isValid) throw new UnauthorizedException('Invalid credentials');
+        const user = await this.userService.validateUser(body.email, body. password);
+        if (!user) throw new UnauthorizedException('Invalid credentials');
 
-        // TODO Generar JWT
-        return { message: 'Login successful' };
+        const payload = { id: user.id, email: body.email };
+        const accessToken = this.jwtService.sign(payload);
+        return { accessToken };
+
     }
 
+    @UseGuards(JwtAuthGuard)
     @Get('me')
-    me() {
-     return `Profile data`;
+        me(@CurrentUser() user: { id: string; email: string }) {
+        return user;
     }
 
-    @Post('reset-password')
-    resetPassword() {
-      return `Password reset`;
+    @Post('reset-password/request')
+    async requestReset(@Body() body: RequestResetDto) {
+        const token = await this.userService.generatePasswordResetToken(body.email);
+        return { resetToken: token }; // solo para el take-home; normalmente se manda por email, no se regresa
+    }
+
+    @Post('reset-password/confirm')
+    async confirmReset(@Body() body: ConfirmResetDto) {
+        await this.userService.resetPassword(body.token, body.newPassword);
+        return { message: 'Password updated' };
     }
 }
