@@ -1,5 +1,5 @@
-import { IsEmail, IsEnum, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
-import {PartialType} from '@nestjs/mapped-types'
+import { IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
+import {PartialType, OmitType} from '@nestjs/mapped-types'
 import { NotificationChannelEnum } from 'src/entities/notification.entity';
 
 
@@ -18,4 +18,4 @@ export class CreateNotificationDto {
     metadata?: Record<string, any>;
 }
 
-export class UpdateNotificationDto extends PartialType(CreateNotificationDto){}
+export class UpdateNotificationDto extends PartialType(OmitType(CreateNotificationDto, ['channel'] as const)) {}
