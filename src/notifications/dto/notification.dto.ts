@@ -1,5 +1,6 @@
-import { IsEmail, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsEnum, IsObject, IsOptional, IsString, MinLength } from 'class-validator';
 import {PartialType} from '@nestjs/mapped-types'
+import { NotificationChannelEnum } from 'src/entities/notification.entity';
 
 
 export class CreateNotificationDto {
@@ -9,8 +10,8 @@ export class CreateNotificationDto {
     @IsString()
     content!: string
     
-    @IsString()
-    channel!: string
+    @IsEnum(NotificationChannelEnum)
+    channel!: NotificationChannelEnum
 
     @IsOptional()
     @IsObject()

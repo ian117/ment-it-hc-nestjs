@@ -1,33 +1,52 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import {
+  Controller, Post, Get, Patch, Delete,
+  Body, Param, UseGuards, ParseUUIDPipe,
+} from '@nestjs/common';
+import { JwtAuthGuard } from 'src/auth/user/jwt-auth.guard';
+import { CurrentUser } from '../decorators/current-user.decorator';
+import { NotificationService } from './notification.service';
 import { CreateNotificationDto, UpdateNotificationDto } from './dto/notification.dto';
 
 @Controller('notifications')
-export class NotificationsController {
+@UseGuards(JwtAuthGuard) // protege TODAS las rutas del controller de una vez
+export class NotificationController {
+  constructor(private readonly notificationService: NotificationService) {}
 
-    @Get()
-    // TODO make pagination DTO 
-    findAll(){
-        return `All returned`
-    }
+  @Post()
+  create(
+    @Body() dto: CreateNotificationDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.notificationService.create(user.id, dto);
+  }
 
-    @Post()
-    addOne(@Body() body: CreateNotificationDto){
-        return body
-    }
+  @Get()
+  findAll(@CurrentUser() user: { id: string }) {
+    return this.notificationService.findAllByUser(user.id);
+  }
 
-    @Get(':id')
-    // TODO make Param DTO
-    getOne(@Param() params){
-        return `${params.id}`
-    }
+  @Get(':id')
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.notificationService.findOneByUser(user.id, id);
+  }
 
-    @Put(':id')
-    updateOne(@Param() params, @Body() body: UpdateNotificationDto){
-        return `${params.id}`
-    }
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateNotificationDto,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.notificationService.update(user.id, id, dto);
+  }
 
-    @Delete(':id')
-    deleteOne(@Param() params){
-        return `${params.id}`
-    }
+  @Delete(':id')
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: { id: string },
+  ) {
+    return this.notificationService.remove(user.id, id);
+  }
 }
