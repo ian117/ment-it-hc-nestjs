@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
+  Index
 } from 'typeorm';
 
 import { User } from './user.entity';
@@ -29,6 +30,7 @@ export class Notification {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
+  @Index()
   @Column()
   userId!: string;
 
@@ -45,7 +47,7 @@ export class Notification {
   @Column({ type: 'enum', enum: NotificationChannelEnum })
   channel!: NotificationChannelEnum;
 
-  @Column({ type: 'enum', enum: NotificationStatusEnum })
+  @Column({ type: 'enum', enum: NotificationStatusEnum, default: NotificationStatusEnum.PENDING })
   status!: NotificationStatusEnum;
 
   @Column({ type: 'timestamp',nullable: true })
