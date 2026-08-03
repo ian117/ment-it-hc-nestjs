@@ -9,7 +9,7 @@ import { CreateNotificationDto, UpdateNotificationDto } from './dto/notification
 
 @Controller('notifications')
 @UseGuards(JwtAuthGuard) // protege TODAS las rutas del controller de una vez
-export class NotificationController {
+export class NotificationsController {
   constructor(private readonly notificationService: NotificationService) {}
 
   @Post()
