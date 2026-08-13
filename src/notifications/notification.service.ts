@@ -61,7 +61,14 @@ export class NotificationService implements NotificationInterface {
         fullNotification.errorMessage = reason;
       }
 
-      return manager.save(fullNotification);
+      const saved = await manager.save(fullNotification);
+
+      // La relacion se cargo para que el sender de email pudiera leer
+      // user.email, no para devolversela al cliente. Sin esto la respuesta del
+      // POST arrastra el usuario entero -- hoy sin el hash (password es
+      // select:false), pero es ruido y acopla la respuesta a un detalle interno.
+      saved.user = undefined;
+      return saved;
     });
   }
 
