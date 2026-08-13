@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   ManyToOne,
   JoinColumn,
-  Index
+  Index,
 } from 'typeorm';
 
 import { User } from './user.entity';
@@ -22,8 +22,6 @@ export enum NotificationStatusEnum {
   SENT = 'sent',
   FAILED = 'failed',
 }
-
-
 
 @Entity()
 export class Notification {
@@ -47,10 +45,14 @@ export class Notification {
   @Column({ type: 'enum', enum: NotificationChannelEnum })
   channel!: NotificationChannelEnum;
 
-  @Column({ type: 'enum', enum: NotificationStatusEnum, default: NotificationStatusEnum.PENDING })
+  @Column({
+    type: 'enum',
+    enum: NotificationStatusEnum,
+    default: NotificationStatusEnum.PENDING,
+  })
   status!: NotificationStatusEnum;
 
-  @Column({ type: 'timestamp',nullable: true })
+  @Column({ type: 'timestamp', nullable: true })
   sentAt!: Date | null;
 
   @Column({ type: 'json', nullable: true })
@@ -58,8 +60,7 @@ export class Notification {
 
   @CreateDateColumn()
   createdAt!: Date;
-  
+
   @UpdateDateColumn()
   updatedAt!: Date;
-
 }

@@ -1,6 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { NotificationSenderInterface } from './notification-sender.interface';
-import { Notification, NotificationChannelEnum } from '../../entities/notification.entity';
+import {
+  Notification,
+  NotificationChannelEnum,
+} from '../../entities/notification.entity';
 
 @Injectable()
 export class EmailNotificationSender implements NotificationSenderInterface {
@@ -25,6 +28,8 @@ export class EmailNotificationSender implements NotificationSenderInterface {
   }
 
   private registerSend(notification: Notification, template: string): void {
-    console.log(`[EMAIL] Sent to ${notification.user?.email} | template length: ${template.length}`);
+    console.log(
+      `[EMAIL] Sent to ${notification.user?.email} | template length: ${template.length}`,
+    );
   }
 }

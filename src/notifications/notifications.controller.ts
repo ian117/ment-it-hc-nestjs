@@ -1,12 +1,29 @@
 import {
-  Controller, Post, Get, Patch, Delete,
-  Body, Param, UseGuards, ParseUUIDPipe,
+  Controller,
+  Post,
+  Get,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  ParseUUIDPipe,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/user/jwt-auth.guard';
 import { CurrentUser } from '../decorators/current-user.decorator';
 import { NotificationService } from './notification.service';
-import { CreateNotificationDto, UpdateNotificationDto } from './dto/notification.dto';
+import {
+  CreateNotificationDto,
+  UpdateNotificationDto,
+} from './dto/notification.dto';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -26,7 +43,9 @@ export class NotificationsController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Obtiene las Notificaciones X usuario basado en su token' })
+  @ApiOperation({
+    summary: 'Obtiene las Notificaciones X usuario basado en su token',
+  })
   @ApiResponse({ status: 200 })
   findAll(@CurrentUser() user: { id: string }) {
     return this.notificationService.findAllByUser(user.id);
@@ -54,6 +73,7 @@ export class NotificationsController {
   }
 
   @Delete(':id')
+  @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Elimina la Notificacion' })
   @ApiResponse({ status: 204 })
   remove(

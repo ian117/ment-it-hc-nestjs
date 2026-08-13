@@ -1,7 +1,7 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_PIPE } from '@nestjs/core'
+import { APP_PIPE } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 
 import { AuthModule } from './auth/auth.module';
@@ -11,13 +11,13 @@ import { AppController } from './app.controller';
 
 import { AppService } from './app.service';
 
-import configuration from './config/configuration' 
+import configuration from './config/configuration';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [configuration]
+      load: [configuration],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -30,23 +30,23 @@ import configuration from './config/configuration'
         username: configService.get<string>('database.user'),
         password: configService.get<string>('database.password'),
         synchronize: false,
-        entities: [__dirname + '/entities/**/*.entity{.ts,.js}'],
-        autoLoadEntities: true
-      })
+        autoLoadEntities: true,
+      }),
     }),
     AuthModule,
     NotificationsModule,
   ],
   controllers: [AppController],
   providers: [
-    AppService, 
-    { provide: APP_PIPE, 
+    AppService,
+    {
+      provide: APP_PIPE,
       useValue: new ValidationPipe({
         whitelist: true,
         forbidNonWhitelisted: true,
-        transform: true
-      })
-    }
+        transform: true,
+      }),
+    },
   ],
 })
 export class AppModule {

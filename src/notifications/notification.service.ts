@@ -1,9 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
-import { Notification, NotificationStatusEnum } from '../entities/notification.entity';
+import {
+  Notification,
+  NotificationStatusEnum,
+} from '../entities/notification.entity';
 import { NotificationInterface } from './notification.interface';
-import { CreateNotificationDto, UpdateNotificationDto } from './dto/notification.dto';
+import {
+  CreateNotificationDto,
+  UpdateNotificationDto,
+} from './dto/notification.dto';
 import { NotificationDispatcherService } from './senders/notification-dispatcher.service';
 
 @Injectable()
@@ -14,35 +20,6 @@ export class NotificationService implements NotificationInterface {
     private dispatcher: NotificationDispatcherService,
     private dataSource: DataSource, // inyecta el DataSource completo
   ) {}
-
-  // async create(userId: string, dto: CreateNotificationDto): Promise<Notification> {
-  //   const notification = this.notificationRepo.create({ ...dto, userId });
-  //   return this.notificationRepo.save(notification);
-  // }
-
-  // async create(
-  //   userId: string,
-  //   dto: CreateNotificationDto,
-  // ): Promise<Notification> {
-  //   const notification = this.notificationRepo.create({ ...dto, userId });
-  //   await this.notificationRepo.save(notification);
-
-  //   // Carga la relación 'user' si el sender de email la necesita (notification.user?.email)
-  //   const fullNotification = await this.notificationRepo.findOneOrFail({
-  //     where: { id: notification.id },
-  //     relations: { user: true },
-  //   });
-
-  //   try {
-  //     await this.dispatcher.dispatch(fullNotification);
-  //     fullNotification.status = NotificationStatusEnum.SENT;
-  //     fullNotification.sentAt = new Date();
-  //   } catch (error) {
-  //     fullNotification.status = NotificationStatusEnum.FAILED;
-  //   }
-
-  //   return this.notificationRepo.save(fullNotification);
-  // }
 
   async create(
     userId: string,

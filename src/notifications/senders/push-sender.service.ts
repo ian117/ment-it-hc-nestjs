@@ -1,6 +1,9 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { NotificationSenderInterface } from './notification-sender.interface';
-import { Notification, NotificationChannelEnum } from '../../entities/notification.entity';
+import {
+  Notification,
+  NotificationChannelEnum,
+} from '../../entities/notification.entity';
 
 @Injectable()
 export class PushNotificationSender implements NotificationSenderInterface {
@@ -19,10 +22,17 @@ export class PushNotificationSender implements NotificationSenderInterface {
   }
 
   private formatPayload(notification: Notification): Record<string, any> {
-    return { title: notification.title, body: notification.content, sound: 'default' };
+    return {
+      title: notification.title,
+      body: notification.content,
+      sound: 'default',
+    };
   }
 
-  private registerSend(deviceToken: string, payload: Record<string, any>): void {
+  private registerSend(
+    deviceToken: string,
+    payload: Record<string, any>,
+  ): void {
     console.log(`[PUSH] Token: ${deviceToken} | payload:`, payload);
   }
 }

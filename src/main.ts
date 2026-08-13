@@ -7,7 +7,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
-  
+
   const config = new DocumentBuilder()
     .setTitle('Notification Service API')
     .setDescription('TKHC API')
