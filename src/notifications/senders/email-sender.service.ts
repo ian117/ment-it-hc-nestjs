@@ -4,10 +4,12 @@ import {
   NotificationChannelEnum,
 } from '../../entities/notification.entity';
 import { BaseNotificationSender } from './base-notification.sender';
+import { EmailPayloadDto } from './payloads/email-payload.dto';
 
 @Injectable()
 export class EmailNotificationSender extends BaseNotificationSender {
   readonly channel = NotificationChannelEnum.EMAIL;
+  readonly payloadDto = EmailPayloadDto;
 
   private static readonly EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

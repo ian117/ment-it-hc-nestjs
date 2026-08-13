@@ -1,9 +1,12 @@
-import { Logger } from '@nestjs/common';
+import { Logger, Type } from '@nestjs/common';
 import {
   Notification,
   NotificationChannelEnum,
 } from '../../entities/notification.entity';
-import { NotificationSenderInterface } from './notification-sender.interface';
+import {
+  NotificationDraft,
+  NotificationSenderInterface,
+} from './notification-sender.interface';
 
 /**
  * Template Method para los canales de envio.
@@ -20,7 +23,16 @@ import { NotificationSenderInterface } from './notification-sender.interface';
 export abstract class BaseNotificationSender implements NotificationSenderInterface {
   abstract readonly channel: NotificationChannelEnum;
 
+  /** Cada canal declara que espera en `metadata`. null = no necesita nada. */
+  readonly payloadDto: Type<object> | null = null;
+
   protected readonly logger = new Logger(this.constructor.name);
+
+  /**
+   * Hook opcional: reglas del canal que miran la notificacion entera.
+   * Default no-op -- solo SMS lo necesita hoy.
+   */
+  validateDraft(_draft: NotificationDraft): void {}
 
   /** Template Method. Fija el orden de los pasos; no se sobrescribe. */
   async send(notification: Notification): Promise<void> {

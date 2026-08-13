@@ -4,10 +4,12 @@ import {
   NotificationChannelEnum,
 } from '../../entities/notification.entity';
 import { BaseNotificationSender } from './base-notification.sender';
+import { PushPayloadDto } from './payloads/push-payload.dto';
 
 @Injectable()
 export class PushNotificationSender extends BaseNotificationSender {
   readonly channel = NotificationChannelEnum.PUSH;
+  readonly payloadDto = PushPayloadDto;
 
   protected resolveRecipient(notification: Notification): string {
     const deviceToken = notification.metadata?.deviceToken as

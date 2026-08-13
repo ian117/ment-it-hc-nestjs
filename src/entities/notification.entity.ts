@@ -55,6 +55,10 @@ export class Notification {
   @Column({ type: 'timestamp', nullable: true })
   sentAt!: Date | null;
 
+  /** Motivo del fallo cuando status = FAILED. Null en cualquier otro caso. */
+  @Column({ type: 'text', nullable: true })
+  errorMessage!: string | null;
+
   @Column({ type: 'json', nullable: true })
   metadata!: Record<string, any> | null;
 

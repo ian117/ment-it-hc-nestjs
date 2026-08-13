@@ -19,7 +19,17 @@ export class CreateNotificationDto {
   @IsEnum(NotificationChannelEnum)
   channel!: NotificationChannelEnum;
 
-  @ApiProperty({ required: false })
+  /**
+   * Datos propios del canal. La forma concreta la define el sender de cada
+   * canal (ver senders/payloads/), y se valida en el dispatcher antes de
+   * persistir -- por eso aca solo se exige que sea un objeto.
+   */
+  @ApiProperty({
+    required: false,
+    description:
+      'Payload del canal. EMAIL: { to?: string }. SMS: { phoneNumber: string } (requerido). PUSH: { deviceToken: string } (requerido).',
+    example: { deviceToken: 'fcm-device-token-abc123' },
+  })
   @IsOptional()
   @IsObject()
   metadata?: Record<string, any>;
