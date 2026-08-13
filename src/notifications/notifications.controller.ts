@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   Inject,
+  Query,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,6 +28,7 @@ import {
   CreateNotificationDto,
   UpdateNotificationDto,
 } from './dto/notification.dto';
+import { PaginationQueryDto } from './dto/pagination-query.dto';
 
 @ApiTags('notifications')
 @ApiBearerAuth()
@@ -55,9 +57,15 @@ export class NotificationsController {
   @ApiOperation({
     summary: 'Obtiene las Notificaciones X usuario basado en su token',
   })
-  @ApiResponse({ status: 200 })
-  findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.notificationService.findAllByUser(user.id);
+  @ApiResponse({
+    status: 200,
+    description: 'Paginado: { data, total, page, limit }, mas nuevas primero',
+  })
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query() query: PaginationQueryDto,
+  ) {
+    return this.notificationService.findAllByUser(user.id, query);
   }
 
   @Get(':id')

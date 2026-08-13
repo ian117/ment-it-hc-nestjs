@@ -10,6 +10,10 @@ import {
   CreateNotificationDto,
   UpdateNotificationDto,
 } from './dto/notification.dto';
+import {
+  PaginatedResult,
+  PaginationQueryDto,
+} from './dto/pagination-query.dto';
 import { NotificationDispatcherService } from './senders/notification-dispatcher.service';
 
 @Injectable()
@@ -61,8 +65,18 @@ export class NotificationService implements NotificationInterface {
     });
   }
 
-  async findAllByUser(userId: string): Promise<Notification[]> {
-    return this.notificationRepo.find({ where: { userId } });
+  async findAllByUser(
+    userId: string,
+    { page, limit }: PaginationQueryDto,
+  ): Promise<PaginatedResult<Notification>> {
+    const [data, total] = await this.notificationRepo.findAndCount({
+      where: { userId },
+      order: { createdAt: 'DESC' }, // sin ORDER BY, Postgres no garantiza orden
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+
+    return { data, total, page, limit };
   }
 
   async findOneByUser(userId: string, id: string): Promise<Notification> {

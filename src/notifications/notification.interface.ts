@@ -1,12 +1,19 @@
 import { Notification } from '../entities/notification.entity';
 import {
+  PaginatedResult,
+  PaginationQueryDto,
+} from './dto/pagination-query.dto';
+import {
   CreateNotificationDto,
   UpdateNotificationDto,
 } from './dto/notification.dto';
 
 export interface NotificationInterface {
   create(userId: string, dto: CreateNotificationDto): Promise<Notification>;
-  findAllByUser(userId: string): Promise<Notification[]>;
+  findAllByUser(
+    userId: string,
+    query: PaginationQueryDto,
+  ): Promise<PaginatedResult<Notification>>;
   findOneByUser(userId: string, id: string): Promise<Notification>;
   update(
     userId: string,
