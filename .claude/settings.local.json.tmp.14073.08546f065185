@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git checkout *)",
+      "Bash(node -p \"Date.now\\(\\)\")",
+      "Bash(npx jest *)",
+      "Bash(git reset *)",
+      "Bash(git restore *)",
+      "Bash(sed -i \"s|^import { AuthenticatedUser } from '../auth/user/authenticated-user.interface';|import type { AuthenticatedUser } from '../auth/user/authenticated-user.interface';|\" notifications/notifications.controller.ts)",
+      "Bash(sed -i \"s|^import { NotificationInterface } from './notification.interface';|import type { NotificationInterface } from './notification.interface';|\" notifications/notifications.controller.ts)",
+      "Bash(sed -i \"s|^import { UserInterface } from './user/user.interface';|import type { UserInterface } from './user/user.interface';|\" auth/auth.controller.ts)",
+      "Bash(sed -i \"s|^import { AuthenticatedUser } from './user/authenticated-user.interface';|import type { AuthenticatedUser } from './user/authenticated-user.interface';|\" auth/auth.controller.ts)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

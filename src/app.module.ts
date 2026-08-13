@@ -1,7 +1,7 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_PIPE } from '@nestjs/core';
 import { DataSource } from 'typeorm';
 
 import { AuthModule } from './auth/auth.module';
@@ -12,6 +12,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
 import configuration from './config/configuration';
+import { AllExceptionsFilter } from './filters/all-exceptions.filter';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import configuration from './config/configuration';
   controllers: [AppController],
   providers: [
     AppService,
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({
