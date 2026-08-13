@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   Injectable,
-  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
@@ -63,25 +62,36 @@ export class UserService implements UserInterface {
     );
   }
 
-  async generatePasswordResetToken(email: string): Promise<string> {
+  /**
+   * Devuelve null si el email no existe, en vez de tirar 404: el controller
+   * responde lo mismo en los dos casos para no delatar que direcciones estan
+   * registradas.
+   */
+  async generatePasswordResetToken(email: string): Promise<string | null> {
     const user = await this.userRepo.findOne({ where: { email } });
-    if (!user) throw new NotFoundException('User not found');
+    if (!user) return null;
 
     const token = crypto.randomBytes(32).toString('hex');
 
     // update() y no save(): con select:false la entity cargada no trae password,
     // y un save() sobre una entity con campos undefined es un pie en la trampa.
     await this.userRepo.update(user.id, {
-      resetPasswordToken: token,
+      // Se guarda el hash, no el token. Una filtracion de la tabla deja de ser
+      // account takeover: con el hash no se puede pedir el reseteo.
+      resetPasswordToken: this.hashToken(token),
       resetPasswordExpires: new Date(Date.now() + 15 * 60 * 1000), // 15 min
     });
 
     return token;
   }
 
+  private hashToken(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
   async resetPassword(token: string, newPassword: string): Promise<void> {
     const user = await this.userRepo.findOne({
-      where: { resetPasswordToken: token },
+      where: { resetPasswordToken: this.hashToken(token) },
       // resetPasswordExpires es select:false -> hay que pedirlo explicitamente,
       // si no la comparacion de expiracion siempre da undefined.
       select: { id: true, resetPasswordExpires: true },

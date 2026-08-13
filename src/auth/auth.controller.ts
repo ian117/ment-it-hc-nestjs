@@ -8,6 +8,8 @@ import {
   Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import {
   ConfirmResetDto,
@@ -28,6 +30,7 @@ export class AuthController {
     @Inject(USER_SERVICE)
     private readonly userService: UserInterface,
     private readonly jwtService: JwtService,
+    private readonly configService: ConfigService,
   ) {}
 
   @Post('signup')
@@ -39,8 +42,10 @@ export class AuthController {
   }
 
   @Post('login')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } }) // freno a la fuerza bruta
   @ApiOperation({ summary: 'Obtiene el token JWT' })
   @ApiResponse({ status: 200 })
+  @ApiResponse({ status: 429, description: 'Demasiados intentos' })
   async login(@Body() body: LoginDto) {
     const user = await this.userService.validateUser(body.email, body.password);
     if (!user) throw new UnauthorizedException('Invalid credentials');
@@ -57,9 +62,31 @@ export class AuthController {
   }
 
   @Post('reset-password/request')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @ApiOperation({ summary: 'Solicita un token de reseteo de password' })
+  @ApiResponse({
+    status: 201,
+    description:
+      'Respuesta identica exista o no el email. Fuera de produccion incluye resetToken.',
+  })
   async requestReset(@Body() body: RequestResetDto) {
     const token = await this.userService.generatePasswordResetToken(body.email);
-    return { resetToken: token }; // solo para el take-home; normalmente se manda por email, no se regresa
+
+    // La respuesta es la misma exista o no el email. Antes esto tiraba 404
+    // cuando no existia, lo que convertia al endpoint en un oraculo de
+    // "que direcciones estan registradas en el sistema".
+    const response: { message: string; resetToken?: string } = {
+      message: 'Si el email existe, se envio un link de reseteo',
+    };
+
+    // El token solo se devuelve fuera de produccion, para poder probar el flujo
+    // sin servidor de mail. En un sistema real viaja por email y nunca por la
+    // respuesta HTTP.
+    if (token && this.configService.get<string>('nodeEnv') !== 'production') {
+      response.resetToken = token;
+    }
+
+    return response;
   }
 
   @Post('reset-password/confirm')

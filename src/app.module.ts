@@ -1,7 +1,8 @@
 import { Module, ValidationPipe } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { APP_FILTER, APP_PIPE } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 
 import { AuthModule } from './auth/auth.module';
@@ -34,6 +35,9 @@ import { AllExceptionsFilter } from './filters/all-exceptions.filter';
         autoLoadEntities: true,
       }),
     }),
+    // Techo global laxo. Los endpoints sensibles (login, reset) lo bajan
+    // con @Throttle en su propio controller.
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 100 }]),
     AuthModule,
     NotificationsModule,
   ],
@@ -41,6 +45,7 @@ import { AllExceptionsFilter } from './filters/all-exceptions.filter';
   providers: [
     AppService,
     { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_PIPE,
       useValue: new ValidationPipe({

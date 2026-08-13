@@ -2,9 +2,15 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { json, urlencoded } from 'express';
+import helmet from 'helmet';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // contentSecurityPolicy off: rompe el UI de Swagger en /docs, que carga
+  // sus assets inline. El resto de las cabeceras de helmet queda activo.
+  app.use(helmet({ contentSecurityPolicy: false }));
+
   app.use(json({ limit: '1mb' }));
   app.use(urlencoded({ extended: true, limit: '1mb' }));
 
