@@ -1,38 +1,29 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { NotificationSenderInterface } from './notification-sender.interface';
 import {
   Notification,
   NotificationChannelEnum,
 } from '../../entities/notification.entity';
+import { BaseNotificationSender } from './base-notification.sender';
 
 @Injectable()
-export class PushNotificationSender implements NotificationSenderInterface {
+export class PushNotificationSender extends BaseNotificationSender {
   readonly channel = NotificationChannelEnum.PUSH;
 
-  async send(notification: Notification): Promise<void> {
-    const deviceToken = this.validateDeviceToken(notification);
-    const payload = this.formatPayload(notification);
-    this.registerSend(deviceToken, payload);
+  protected resolveRecipient(notification: Notification): string {
+    const deviceToken = notification.metadata?.deviceToken as
+      string | undefined;
+
+    if (!deviceToken) {
+      throw new BadRequestException('Missing device token');
+    }
+    return deviceToken;
   }
 
-  private validateDeviceToken(notification: Notification): string {
-    const token = notification.metadata?.deviceToken;
-    if (!token) throw new BadRequestException('Missing device token');
-    return token;
-  }
-
-  private formatPayload(notification: Notification): Record<string, any> {
+  protected buildPayload(notification: Notification): unknown {
     return {
       title: notification.title,
       body: notification.content,
       sound: 'default',
     };
-  }
-
-  private registerSend(
-    deviceToken: string,
-    payload: Record<string, any>,
-  ): void {
-    console.log(`[PUSH] Token: ${deviceToken} | payload:`, payload);
   }
 }

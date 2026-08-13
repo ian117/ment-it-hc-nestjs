@@ -1,35 +1,32 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { NotificationSenderInterface } from './notification-sender.interface';
 import {
   Notification,
   NotificationChannelEnum,
 } from '../../entities/notification.entity';
+import { BaseNotificationSender } from './base-notification.sender';
 
 @Injectable()
-export class EmailNotificationSender implements NotificationSenderInterface {
+export class EmailNotificationSender extends BaseNotificationSender {
   readonly channel = NotificationChannelEnum.EMAIL;
 
-  async send(notification: Notification): Promise<void> {
-    this.validateRecipient(notification);
-    const template = this.generateTemplate(notification);
-    this.registerSend(notification, template);
-  }
+  private static readonly EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-  private validateRecipient(notification: Notification): void {
-    const email = notification.user?.email;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email)) {
+  protected resolveRecipient(notification: Notification): string {
+    // Por defecto va al email de la cuenta; metadata.to permite redirigirlo.
+    const email =
+      (notification.metadata?.to as string | undefined) ??
+      notification.user?.email;
+
+    if (!email || !EmailNotificationSender.EMAIL_REGEX.test(email)) {
       throw new BadRequestException('Invalid recipient email format');
     }
+    return email;
   }
 
-  private generateTemplate(notification: Notification): string {
-    return `<h1>${notification.title}</h1><p>${notification.content}</p>`;
-  }
-
-  private registerSend(notification: Notification, template: string): void {
-    console.log(
-      `[EMAIL] Sent to ${notification.user?.email} | template length: ${template.length}`,
-    );
+  protected buildPayload(notification: Notification): unknown {
+    return {
+      subject: notification.title,
+      html: `<h1>${notification.title}</h1><p>${notification.content}</p>`,
+    };
   }
 }
