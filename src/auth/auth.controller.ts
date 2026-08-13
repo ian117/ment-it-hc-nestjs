@@ -5,6 +5,7 @@ import {
   Post,
   UnauthorizedException,
   UseGuards,
+  Inject,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
@@ -14,7 +15,9 @@ import {
   LoginDto,
   RequestResetDto,
 } from './dto/user.dto';
-import { UserService } from './user/user.service';
+import type { UserInterface } from './user/user.interface';
+import { USER_SERVICE } from './user/user-service.token';
+import type { AuthenticatedUser } from './user/authenticated-user.interface';
 import { JwtAuthGuard } from './user/jwt-auth.guard';
 import { CurrentUser } from 'src/decorators/current-user.decorator';
 
@@ -22,7 +25,8 @@ import { CurrentUser } from 'src/decorators/current-user.decorator';
 @ApiTags('auth')
 export class AuthController {
   constructor(
-    private readonly userService: UserService,
+    @Inject(USER_SERVICE)
+    private readonly userService: UserInterface,
     private readonly jwtService: JwtService,
   ) {}
 
@@ -48,7 +52,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  me(@CurrentUser() user: { id: string; email: string }) {
+  me(@CurrentUser() user: AuthenticatedUser) {
     return user;
   }
 
