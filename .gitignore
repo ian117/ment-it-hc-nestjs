@@ -35,6 +35,11 @@ lerna-debug.log*
 !.vscode/launch.json
 !.vscode/extensions.json
 
+# Claude Code
+# settings.local.json ademas guarda comandos aprobados, que pueden incluir
+# credenciales de dev pegadas en la linea (ej: PGPASSWORD=...).
+.claude/
+
 # dotenv environment variable files
 .env
 .env.development.local
