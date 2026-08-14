@@ -1,3 +1,8 @@
+name: nestjs-notification
+
+# `docker compose up -d`               -> solo la base (para correr la app con npm)
+# `docker compose --profile full up -d` -> base + migraciones + app containerizada
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,16 +13,92 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-notifications_db}
     ports:
+      # DB_PORT es el puerto del HOST. Si ya tenes un Postgres local en 5432,
+      # poné DB_PORT=5433 en el .env. Adentro de la red siempre es 5432.
       - '${DB_PORT:-5432}:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - notifications
     healthcheck:
-      # Sin healthcheck, `docker compose up -d` vuelve antes de que Postgres
-      # acepte conexiones y la primera migracion falla por connection refused.
+      # Sin healthcheck, `up -d` vuelve antes de que Postgres acepte
+      # conexiones y lo que dependa de el arranca contra una puerta cerrada.
       test: ['CMD-SHELL', 'pg_isready -U ${DB_USER:-postgres}']
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    profiles: ['full']
+    build:
+      context: .
+      target: runtime
+    image: nestjs-notification-app
+    container_name: nestjs-notification-migrate
+    command: ['npm', 'run', 'migration:run:prod']
+    environment: &app_env
+      NODE_ENV: production
+      # Dentro de la red de compose se llega al server por el NOMBRE DEL
+      # SERVICIO y por su puerto INTERNO. Usar localhost o el puerto mapeado
+      # del host es el error clasico: adentro del contenedor, localhost es el
+      # contenedor mismo.
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres}
+      DB_NAME: ${DB_NAME:-notifications_db}
+      JWT_SECRET: ${JWT_SECRET:-}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - notifications
+    # Es un job de una sola corrida: si reintentara solo, taparia el error.
+    restart: 'no'
+
+  app:
+    profiles: ['full']
+    build:
+      context: .
+      target: runtime
+    image: nestjs-notification-app
+    container_name: nestjs-notification-app
+    environment:
+      <<: *app_env
+      PORT: 3000
+    ports:
+      - '${APP_PORT:-3000}:3000'
+    depends_on:
+      # No arranca hasta que las migraciones terminaron BIEN. Con un
+      # depends_on comun arrancaria en paralelo y fallaria contra un esquema
+      # a medio construir.
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - notifications
+    restart: unless-stopped
+    healthcheck:
+      # fetch() es global desde Node 18, asi que no hace falta meter curl ni
+      # wget en la imagen solo para esto.
+      test:
+        [
+          'CMD',
+          'node',
+          '-e',
+          "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+networks:
+  # Red propia y explicita en vez de la default que compose inventa: los
+  # servicios se resuelven entre si por nombre y quedan aislados de otros
+  # proyectos que corran en el mismo daemon.
+  notifications:
+    driver: bridge
 
 volumes:
   postgres_data:

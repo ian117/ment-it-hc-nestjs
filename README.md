@@ -89,15 +89,37 @@ src/
 
 ## Instalación
 
+Hay dos modos, y el compose los distingue con un *profile*.
+
+### Modo desarrollo — la base en Docker, la app con `npm`
+
 ```bash
 npm install
 cp .env.example .env      # completar con tus credenciales locales
-docker compose up -d      # levanta Postgres 16 con healthcheck
+docker compose up -d      # solo Postgres 16, con healthcheck
 npm run migration:run
 npm run start:dev
 ```
 
-Swagger queda en `http://localhost:3000/docs`.
+### Modo completo — todo containerizado
+
+```bash
+cp .env.example .env
+docker compose --profile full up -d --build
+```
+
+Levanta tres servicios en orden: Postgres, un job `migrate` que corre las
+migraciones una sola vez, y la app — que no arranca hasta que ese job
+**terminó bien** (`service_completed_successfully`). No hace falta correr
+migraciones a mano.
+
+```bash
+docker compose --profile full logs -f app   # seguir la app
+docker compose --profile full down          # bajar todo
+docker compose --profile full down -v       # ... y borrar el volumen
+```
+
+Swagger queda en `http://localhost:3000/docs` en los dos modos.
 
 Si preferís tu propio Postgres en vez del contenedor, salteá el `docker compose up` y apuntá las variables `DB_*` a tu instancia.
 
@@ -116,8 +138,11 @@ Si preferís tu propio Postgres en vez del contenedor, salteá el `docker compos
 | `DB_PASSWORD` | Password de la DB | `postgres` |
 | `JWT_SECRET` | Secreto para firmar tokens JWT | `un-secreto-largo-random` |
 | `JWT_EXPIRES_IN` | Expiración del token | `1h` |
+| `APP_PORT` | Puerto del host para la app containerizada | `3000` |
 
-El `docker-compose.yml` lee `DB_USER`, `DB_PASSWORD`, `DB_NAME` y `DB_PORT` del mismo `.env`.
+El `docker-compose.yml` lee `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`, `APP_PORT` y `JWT_SECRET` del mismo `.env`.
+
+> **`DB_HOST` y `DB_PORT` significan cosas distintas según quién se conecta.** Desde el host son `localhost` y el puerto mapeado. Desde adentro de la red de compose, el servidor se alcanza por el **nombre del servicio** (`postgres`) y su **puerto interno** (`5432`), sin importar el mapeo. Por eso el compose los pisa explícitamente para los servicios `app` y `migrate`: adentro de un contenedor, `localhost` es el contenedor mismo.
 
 ## Scripts disponibles
 
@@ -277,7 +302,22 @@ Un envío fallido devuelve **201 con `status: "failed"`**, no un 5xx: la notific
 - **Token de reseteo hasheado**: se persiste `sha256(token)` y se devuelve el crudo. Una filtración de la tabla deja de ser account takeover.
 - El `resetToken` viaja en la respuesta HTTP **solo fuera de producción**, para poder probar el flujo sin servidor de mail. En producción se omite y la respuesta es idéntica en ambos casos.
 
+### Docker
+
+**Imagen multi-stage.** Tres etapas: `deps` instala solo dependencias de producción, `build` instala todo y compila TypeScript, y `runtime` copia únicamente `node_modules` de producción y `dist`. La imagen final no lleva compiladores, ni `devDependencies`, ni código fuente.
+
+**Debian slim y no Alpine.** `bcrypt` es un módulo nativo y publica *prebuilds* para glibc, no para musl. Con Alpine hay que compilarlo en cada build: más lento y más frágil. La diferencia de tamaño no justifica esa fricción acá.
+
+**Corre como usuario `node`, no como root.** Ser root dentro del contenedor no aporta nada y agranda el radio de un escape.
+
+**Las migraciones son un servicio aparte**, no un `entrypoint` de la app. La app declara `depends_on: migrate` con `condition: service_completed_successfully`, así que no acepta tráfico hasta que las migraciones terminaron **bien**. Un `depends_on` común solo espera a que el contenedor arranque, no a que el esquema esté listo. Además, con el job separado las migraciones corren una sola vez aunque se escalen réplicas de la app.
+
+**Red propia y explícita** (`notifications`) en vez de la que compose crea sola: los servicios se resuelven por nombre y quedan aislados de otros proyectos en el mismo daemon.
+
+**Perfil `full`.** Los servicios `app` y `migrate` están detrás de un profile para que `docker compose up -d` siga levantando solo la base — que es el flujo de desarrollo, con la app corriendo por `npm run start:dev` y hot reload.
+
 ### Deuda conocida
 
 - `JwtStrategy.validate()` no verifica que el usuario siga existiendo: un token sigue siendo válido hasta que expira aunque se borre la cuenta. Evitarlo cuesta una query por request; con `expiresIn: 1h` la ventana es acotada.
 - El throttler usa el storage en memoria, que no sirve con más de una instancia. Con varias réplicas hay que moverlo a Redis.
+- `configuration.ts` cae a un `JWT_SECRET` por defecto si la variable está vacía. En desarrollo es cómodo; ahora que existe una imagen con `NODE_ENV=production`, lo correcto sería **fallar al arrancar** en vez de firmar tokens con un secreto conocido.

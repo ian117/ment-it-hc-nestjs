@@ -1,0 +1,27 @@
+# Todo lo que no tiene por que entrar al contexto de build.
+# Sin esto, `docker build` manda node_modules entero al daemon y ademas
+# arriesga que un COPY se lleve puesto el .env con credenciales reales.
+
+node_modules
+dist
+build
+coverage
+.git
+.gitignore
+
+# Secretos: nunca dentro de una imagen.
+.env
+.env.*
+!.env.example
+
+.claude
+.vscode
+.idea
+
+*.log
+npm-debug.log*
+
+Dockerfile
+.dockerignore
+docker-compose.yml
+README.md
