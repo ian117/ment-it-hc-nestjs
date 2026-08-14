@@ -101,6 +101,8 @@ Swagger queda en `http://localhost:3000/docs`.
 
 Si preferís tu propio Postgres en vez del contenedor, salteá el `docker compose up` y apuntá las variables `DB_*` a tu instancia.
 
+> **Si ya tenés un Postgres local escuchando en el 5432**, el contenedor no va a poder bindear ese puerto. Poné `DB_PORT=5433` en el `.env`: el compose usa esa misma variable, así que mapea `5433` del host al `5432` del contenedor y la app se conecta al 5433. No hace falta tocar nada más.
+
 ## Variables de entorno
 
 | Variable | Descripción | Ejemplo |
