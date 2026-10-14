@@ -71,7 +71,7 @@ Swagger UI en `/docs` y el documento OpenAPI en `/docs-json`.
 | `DB_HOST` | — | Host de Postgres. En compose se pisa por `postgres`. |
 | `DB_PORT` | `5432` | Puerto de Postgres **en el host** (también lo usa compose para mapear). Si el 5432 está ocupado, usa p. ej. `5433`. Dentro de compose siempre es `5432`. |
 | `DB_USER`, `DB_PASSWORD`, `DB_NAME` | `postgres`, `postgres`, `notifications_db` | Credenciales y base; compose las usa también para crear Postgres. |
-| `JWT_SECRET` | `randomword` si falta | Secreto HS256. **Obligatorio fijarlo** fuera de desarrollo (por ejemplo `openssl rand -hex 32`). |
+| `JWT_SECRET` | `dev-only-insecure-secret-change-me` fuera de producción | Secreto HS256. **En producción es obligatorio, de ≥ 32 caracteres y distinto de los valores de desarrollo: si no, la app no arranca** (ADR-015). Genera uno con `openssl rand -hex 32`. |
 | `JWT_EXPIRES_IN_SECONDS` | `3600` | Vigencia del access token; es el `expiresIn` de `/auth/login`. |
 | `RESET_TOKEN_EXPIRES_MINUTES` | `15` | Vigencia del token de reseteo de contraseña. |
 

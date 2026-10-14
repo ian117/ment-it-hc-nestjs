@@ -1,3 +1,5 @@
+import { resolveJwtSecret } from './jwt-secret';
+
 function positiveInt(raw: string | undefined, fallback: number): number {
   const value = parseInt(raw ?? '', 10);
   return Number.isInteger(value) && value > 0 ? value : fallback;
@@ -14,7 +16,7 @@ export default () => ({
     password: process.env.DB_PASSWORD,
   },
   jwt: {
-    secret: process.env.JWT_SECRET || 'randomword',
+    secret: resolveJwtSecret(process.env.JWT_SECRET, process.env.NODE_ENV),
     expiresInSeconds: positiveInt(process.env.JWT_EXPIRES_IN_SECONDS, 3600),
   },
   resetTokenExpiresMinutes: positiveInt(
