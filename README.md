@@ -1,323 +1,204 @@
-# NestJS Notification Service
+# nestjs-notification
 
-API REST para gestión de usuarios, autenticación y envío de notificaciones multicanal (Email, SMS, Push), construida con NestJS, TypeORM y PostgreSQL.
+API REST de notificaciones multicanal (email, SMS, push) con autenticación JWT. Es la implementación NestJS de un diseño compartido con una versión FastAPI: mismo contrato HTTP, mismo dominio y mismo esquema de base de datos. Solo cambia el stack.
 
-## Tabla de contenido
-
-- [Stack](#stack)
-- [Arquitectura](#arquitectura)
-- [Requisitos previos](#requisitos-previos)
-- [Instalación](#instalación)
-- [Variables de entorno](#variables-de-entorno)
-- [Scripts disponibles](#scripts-disponibles)
-- [Migraciones](#migraciones)
-- [Endpoints](#endpoints)
-- [Payloads por canal](#payloads-por-canal)
-- [Decisiones de diseño](#decisiones-de-diseño)
+- Diseño: [`../docs/diseno-notificaciones.md`](../docs/diseno-notificaciones.md)
+- Contrato HTTP formal: [`../contract/openapi.yaml`](../contract/openapi.yaml)
+- Decisiones de arquitectura (ADR): [`../docs/adr`](../docs/adr)
 
 ## Stack
 
-- **Framework:** NestJS
-- **Lenguaje:** TypeScript
-- **ORM:** TypeORM
-- **Base de datos:** PostgreSQL
-- **Autenticación:** Passport + JWT (`@nestjs/passport`, `@nestjs/jwt`, `passport-jwt`)
-- **Validación:** `class-validator` + `class-transformer`
-- **Hashing:** bcrypt
-- **Seguridad:** helmet + `@nestjs/throttler`
+NestJS 11 · TypeScript · TypeORM · PostgreSQL 16 · Passport + JWT (`@nestjs/jwt`) · bcrypt · helmet · `@nestjs/throttler` · class-validator · Swagger · Jest
 
-## Arquitectura
+## Estructura (hexagonal, [ADR-001](../docs/adr/001-arquitectura-hexagonal.md))
 
 ```
 src/
-├── entities/
-│   ├── user.entity.ts
-│   └── notification.entity.ts
-├── auth/
-│   ├── auth.controller.ts
-│   ├── auth.module.ts
-│   ├── dto/user.dto.ts
-│   ├── strategies/jwt.strategy.ts
-│   └── user/
-│       ├── user.service.ts
-│       ├── user.interface.ts
-│       ├── user-service.token.ts
-│       ├── authenticated-user.interface.ts
-│       └── jwt-auth.guard.ts
-├── notifications/
-│   ├── notifications.controller.ts
-│   ├── notifications.module.ts
-│   ├── notification.service.ts
-│   ├── notification.interface.ts
-│   ├── notification-service.token.ts
-│   ├── dto/
-│   │   ├── notification.dto.ts
-│   │   └── pagination-query.dto.ts
-│   └── senders/
-│       ├── notification-sender.interface.ts
-│       ├── base-notification.sender.ts
-│       ├── notification-dispatcher.service.ts
-│       ├── notification-sender.token.ts
-│       ├── email-sender.service.ts
-│       ├── sms-sender.service.ts
-│       ├── push-sender.service.ts
-│       └── payloads/
-│           ├── email-payload.dto.ts
-│           ├── sms-payload.dto.ts
-│           └── push-payload.dto.ts
-├── filters/
-│   └── all-exceptions.filter.ts
-├── decorators/
-│   └── current-user.decorator.ts
-├── config/configuration.ts
-├── migrations/
-├── data-source.ts
-├── app.module.ts
-└── main.ts
+  domain/           # User, Email, PasswordResetToken, Notification, ChannelPolicy, errores.
+                    # No importa @nestjs, typeorm ni class-validator.
+  application/      # casos de uso + puertos (interfaces con token Symbol)
+    ports/          # repositorios, PasswordHasher, TokenIssuer, Clock, IdGenerator, ChannelGateway...
+    use-cases/      # Register, Login, GetCurrentUser, Request/ConfirmPasswordReset,
+                    # Create, List, Get, Revise, DeleteNotification
+    testing/        # fakes en memoria de los puertos (solo para tests)
+  infrastructure/   # adaptadores
+    persistence/    # entidades TypeORM, mappers, repositorios
+    channels/       # gateways simulados
+    security/       # BcryptPasswordHasher, JwtTokenIssuer, CryptoResetTokenGenerator
+    clock/ ids/     # SystemClock, UuidIdGenerator
+  api/              # controllers, DTOs (class-validator), pipes, filtro de Problem Details
+  migrations/       # migraciones de TypeORM
+  app.module.ts, auth.module.ts, notifications.module.ts, common.module.ts
+                    # raíz de composición: lo único que conoce las clases concretas
 ```
 
-**Capas:**
-- **Controller** — recibe la request, delega al service, no contiene lógica de negocio.
-- **Service** — lógica de negocio y acceso a datos (vía `Repository<Entity>` de TypeORM).
-- **DTOs** — contrato de entrada, validado con `class-validator`.
-- **Senders** — estrategias de envío por canal (ver [Decisiones de diseño](#decisiones-de-diseño)).
+La entidad TypeORM no es la entidad de dominio: un mapper traduce entre ambas. Los casos de uso reciben la hora y los ids por los puertos `Clock` e `IdGenerator` ([ADR-009](../docs/adr/009-transiciones-de-notification.md), [ADR-003](../docs/adr/003-uuid-en-el-dominio.md)).
 
-## Requisitos previos
+## Puesta en marcha
 
-- Node.js 18+
-- PostgreSQL 14+ (o Docker, ver abajo)
-
-## Instalación
-
-Hay dos modos, y el compose los distingue con un *profile*.
-
-### Modo desarrollo — la base en Docker, la app con `npm`
+Requisitos: Node 22 y Docker.
 
 ```bash
+cp .env.example .env        # y fija JWT_SECRET (ver tabla)
 npm install
-cp .env.example .env      # completar con tus credenciales locales
-docker compose up -d      # solo Postgres 16, con healthcheck
-npm run migration:run
-npm run start:dev
 ```
 
-### Modo completo — todo containerizado
+### Modo local (app con npm, base en Docker)
 
 ```bash
-cp .env.example .env
-docker compose --profile full up -d --build
+docker compose up -d        # solo Postgres (contenedor nestjs-notification-db)
+npm run migration:run       # aplica las migraciones
+npm run start:dev           # app en http://localhost:3000
 ```
 
-Levanta tres servicios en orden: Postgres, un job `migrate` que corre las
-migraciones una sola vez, y la app — que no arranca hasta que ese job
-**terminó bien** (`service_completed_successfully`). No hace falta correr
-migraciones a mano.
+### Todo containerizado (perfil `full`)
 
 ```bash
-docker compose --profile full logs -f app   # seguir la app
-docker compose --profile full down          # bajar todo
-docker compose --profile full down -v       # ... y borrar el volumen
+docker compose --profile full up -d --build   # db + migrate (una corrida) + app
 ```
 
-Swagger queda en `http://localhost:3000/docs` en los dos modos.
+`migrate` ejecuta `npm run migration:run:prod` y la app no arranca hasta que termine bien. El healthcheck de la app usa `GET /`.
 
-Si preferís tu propio Postgres en vez del contenedor, salteá el `docker compose up` y apuntá las variables `DB_*` a tu instancia.
+Swagger UI en `/docs` y el documento OpenAPI en `/docs-json`.
 
-> **Si ya tenés un Postgres local escuchando en el 5432**, el contenedor no va a poder bindear ese puerto. Poné `DB_PORT=5433` en el `.env`: el compose usa esa misma variable, así que mapea `5433` del host al `5432` del contenedor y la app se conecta al 5433. No hace falta tocar nada más.
+### Variables de entorno
 
-## Variables de entorno
-
-| Variable | Descripción | Ejemplo |
+| Variable | Defecto | Efecto |
 |---|---|---|
-| `NODE_ENV` | Entorno de ejecución | `development` |
-| `PORT` | Puerto de la app | `3000` |
-| `DB_HOST` | Host de PostgreSQL | `localhost` |
-| `DB_PORT` | Puerto de PostgreSQL | `5432` |
-| `DB_NAME` | Nombre de la base de datos | `notifications_db` |
-| `DB_USER` | Usuario de la DB | `postgres` |
-| `DB_PASSWORD` | Password de la DB | `postgres` |
-| `JWT_SECRET` | Secreto para firmar tokens JWT | `un-secreto-largo-random` |
-| `JWT_EXPIRES_IN` | Expiración del token | `1h` |
-| `APP_PORT` | Puerto del host para la app containerizada | `3000` |
+| `NODE_ENV` | `development` | Con `production`, `POST /auth/password-reset/request` **no** devuelve `resetToken`; en cualquier otro valor lo devuelve si el email existe. En compose, `migrate` y `app` fuerzan `production`. |
+| `PORT` | `3000` | Puerto de la app. |
+| `APP_PORT` | `3000` | Puerto del host para la app del perfil `full`. |
+| `DB_HOST` | — | Host de Postgres. En compose se pisa por `postgres`. |
+| `DB_PORT` | `5432` | Puerto de Postgres **en el host** (también lo usa compose para mapear). Si el 5432 está ocupado, usa p. ej. `5433`. Dentro de compose siempre es `5432`. |
+| `DB_USER`, `DB_PASSWORD`, `DB_NAME` | `postgres`, `postgres`, `notifications_db` | Credenciales y base; compose las usa también para crear Postgres. |
+| `JWT_SECRET` | `randomword` si falta | Secreto HS256. **Obligatorio fijarlo** fuera de desarrollo (por ejemplo `openssl rand -hex 32`). |
+| `JWT_EXPIRES_IN_SECONDS` | `3600` | Vigencia del access token; es el `expiresIn` de `/auth/login`. |
+| `RESET_TOKEN_EXPIRES_MINUTES` | `15` | Vigencia del token de reseteo de contraseña. |
 
-El `docker-compose.yml` lee `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PORT`, `APP_PORT` y `JWT_SECRET` del mismo `.env`.
+La configuración se lee en `src/config/configuration.ts`; los valores numéricos inválidos caen al defecto.
 
-> **`DB_HOST` y `DB_PORT` significan cosas distintas según quién se conecta.** Desde el host son `localhost` y el puerto mapeado. Desde adentro de la red de compose, el servidor se alcanza por el **nombre del servicio** (`postgres`) y su **puerto interno** (`5432`), sin importar el mapeo. Por eso el compose los pisa explícitamente para los servicios `app` y `migrate`: adentro de un contenedor, `localhost` es el contenedor mismo.
-
-## Scripts disponibles
+### Comandos
 
 ```bash
-npm run start:dev          # levanta la app en modo watch
-npm run build
-npm run lint               # eslint + prettier (con --fix)
-npm test                   # unitarios, no necesitan DB
-npm run test:e2e           # e2e, necesita la DB levantada y migrada
-
-# Migraciones (desarrollo, usa ts-node)
-npm run migration:create -- src/migrations/NombreMigracion    # migración vacía (SQL manual)
-npm run migration:generate -- src/migrations/NombreMigracion  # autogenerada por diff de entities
-npm run migration:run
-npm run migration:revert
-
-# Migraciones (producción, requiere build previo)
-npm run build
-npm run migration:run:prod
-npm run migration:revert:prod
+npm run start:dev           # desarrollo con recarga
+npm run build               # compila a dist/
+npm run start:prod          # node dist/main
+npm run lint                # eslint --fix
+npm test                    # tests unitarios
+npm run test:e2e            # tests e2e
+npm run migration:run       # aplica migraciones pendientes (ts-node)
+npm run migration:revert    # revierte la última
+npm run migration:generate -- src/migrations/Nombre
+npm run migration:run:prod  # igual que run, sobre dist/ (lo usa el perfil full)
 ```
 
-## Migraciones
-
-Corren en orden según el timestamp del nombre de archivo/clase:
-
-1. `CreatePgExtensions` — instala `uuid-ossp` (requerida para `uuid_generate_v4()`).
-2. `UserNotifications` — tablas `user` y `notification` con su FK e índice.
-3. `AddUserEmailUnique` — constraint `UNIQUE` sobre `user.email`.
-4. `AddNotificationErrorMessage` — columna `errorMessage`.
+Nunca se usa `synchronize: true`: el esquema solo cambia con migraciones, que se generan y se revisan a mano.
 
 ## Endpoints
 
-### Auth (`/auth`)
+JSON en camelCase. Todas las rutas de `/notifications` exigen `Authorization: Bearer <accessToken>` y operan solo sobre las notificaciones del usuario autenticado. Los errores se devuelven como Problem Details; cualquier ruta protegida sin token válido responde 401.
 
-| Método | Ruta | Protegido | Descripción |
+| Método | Ruta | Éxito | Errores |
 |---|---|---|---|
-| POST | `/auth/signup` | No | Registra un usuario nuevo (409 si el email ya existe) |
-| POST | `/auth/login` | No | Autentica y regresa un JWT (máx. 5 intentos/min) |
-| GET | `/auth/me` | Sí | Perfil del usuario autenticado |
-| POST | `/auth/reset-password/request` | No | Genera un token de reseteo (máx. 5/min) |
-| POST | `/auth/reset-password/confirm` | No | Aplica el nuevo password con el token |
+| POST | `/auth/register` | 201 `{ id, email, createdAt }` | 400, 409 (email ya registrado) |
+| POST | `/auth/login` | 200 `{ accessToken, tokenType: "Bearer", expiresIn }` | 400, 401, 429 |
+| GET | `/auth/me` | 200 `{ id, email, createdAt }` | 401 |
+| POST | `/auth/password-reset/request` | 202 `{ message, resetToken? }` | 400, 429 |
+| POST | `/auth/password-reset/confirm` | 200 `{ message }` | 400 (token inexistente, vencido o usado) |
+| POST | `/notifications` | 201 `Notification` (`sent` o `failed`) | 400, 401 |
+| GET | `/notifications?page=1&limit=20` | 200 `{ data, total, page, limit }` | 400, 401 |
+| GET | `/notifications/{id}` | 200 `Notification` | 401, 404 |
+| PATCH | `/notifications/{id}` | 200 `Notification` tras el reenvío | 400, 401, 404, 409 |
+| DELETE | `/notifications/{id}` | 204 | 401, 404 |
 
-### Notifications (`/notifications`)
+Detalles:
 
-Todas las rutas requieren JWT (`Authorization: Bearer <token>`) y operan siempre sobre las notificaciones del usuario autenticado (no existe vista de admin).
+- Contraseña: 8 a 128 caracteres (register y confirm). `limit` va de 1 a 100; `page ≥ 1`.
+- Listado: más nuevas primero, orden determinístico por `(created_at desc, id desc)`.
+- Creación: `{ "title", "content", "channel": "email|sms|push", "payload": { "recipient" } }`. Edición: todos los campos opcionales y `channel` no se acepta (se rechaza como propiedad desconocida); un cuerpo vacío es 400.
+- Los DTOs rechazan propiedades desconocidas.
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| POST | `/notifications` | Crea una notificación y dispara su envío por el canal indicado |
-| GET | `/notifications?page=1&limit=20` | Lista paginada, más nuevas primero |
-| GET | `/notifications/:id` | Detalle de una notificación propia |
-| PATCH | `/notifications/:id` | Actualiza título/contenido/metadata (el canal no es editable) |
-| DELETE | `/notifications/:id` | Elimina una notificación propia (204) |
-
-`GET /notifications` devuelve `{ data, total, page, limit }`. `limit` tiene un techo de 100.
-
-### Shape de error
-
-Todos los errores de la API tienen la misma forma:
+Ejemplo de `Notification`:
 
 ```json
-{
-  "statusCode": 400,
-  "message": ["deviceToken should not be empty"],
-  "error": "Bad Request",
-  "path": "/notifications",
-  "timestamp": "2026-08-13T18:05:44.133Z"
-}
+{ "id": "uuid", "title": "Hola", "content": "…", "channel": "sms",
+  "payload": { "recipient": "+5219611234567" }, "status": "sent", "attempts": 1,
+  "errorMessage": null, "sentAt": "2026-10-14T12:00:00.000Z",
+  "createdAt": "2026-10-14T12:00:00.000Z", "updatedAt": "2026-10-14T12:00:00.000Z" }
 ```
 
-`message` es un array cuando el error viene de la validación de DTOs (un item por campo), y un string en el resto de los casos.
+## Errores: Problem Details (RFC 9457)
 
-## Payloads por canal
+Los errores salen como `application/problem+json` con `type = https://errors.local/<slug>` ([ADR-006](../docs/adr/006-problem-details.md), tabla completa en [ADR-012](../docs/adr/012-adaptadores-de-notificaciones.md) y [ADR-014](../docs/adr/014-adaptadores-de-auth.md)). Nunca se filtran trazas.
 
-El campo `metadata` transporta los datos propios de cada canal. Cada sender declara qué espera, y se valida **antes** de persistir:
-
-| Canal | `metadata` | Reglas extra |
+| Caso | HTTP | slug |
 |---|---|---|
-| `email` | `{ to?: string }` — si falta, usa el email de la cuenta | `to` debe ser un email válido |
-| `sms` | `{ phoneNumber: string }` — **requerido** | E.164; `content` máximo 160 caracteres |
-| `push` | `{ deviceToken: string }` — **requerido** | — |
+| Validación de request (body, query) | 400 | `validation-error` |
+| Canal inexistente | 400 | `unknown-channel` |
+| Regla del canal violada | 400 | `channel-rule-violation` |
+| Token de reseteo inválido | 400 | `invalid-reset-token` |
+| Token ausente/inválido, credenciales incorrectas | 401 | `unauthorized` |
+| Notificación inexistente o ajena; id con formato inválido | 404 | `notification-not-found` |
+| Notificación no editable (estado ≠ `failed`) | 409 | `notification-not-editable` |
+| Email ya registrado | 409 | `email-already-registered` |
+| Límite de peticiones | 429 | `too-many-requests` |
+| Error no controlado | 500 | `internal-error` |
 
-Un payload inválido devuelve **400** y no escribe nada en la base.
-
-## Decisiones de diseño
-
-### Autenticación y autorización
-
-- Passport + JWT estándar, con `sub` como claim del id de usuario (convención RFC 7519).
-- El `userId` nunca se recibe del body — siempre se resuelve desde `req.user` (JWT) vía el decorador `@CurrentUser()`.
-- Acceso a recursos ajenos: las queries filtran siempre por `{ id, userId }` **en conjunto**, devolviendo `404` en vez de `403` para no confirmarle a un tercero que el recurso existe.
-- `password`, `reset_password_token` y `reset_password_expires` están marcados `select: false`: el hash no viaja en un `find()` casual. Quien lo necesita (`validateUser`) lo pide con un `select` explícito.
-
-### Unicidad del email
-
-La constraint `UNIQUE` vive en la base, no solo en el código. El chequeo previo en `signUp()` es un fast-path amable (evita hashear de más), pero no garantiza nada: entre el `SELECT` y el `INSERT` hay una ventana en la que otra request puede insertar el mismo email. Quien cierra la carrera es Postgres, y el error `23505` se traduce a `ConflictException`.
-
-### Envío de notificaciones: Strategy + Template Method
-
-Cada canal implementa `NotificationSenderInterface`. La forma compartida —resolver destinatario, armar payload, entregar, registrar— vive una sola vez en `BaseNotificationSender`:
-
-```
-BaseNotificationSender implements NotificationSenderInterface   // QUÉ cumple
-EmailNotificationSender extends BaseNotificationSender          // CÓMO lo cumple
+```json
+{ "type": "https://errors.local/channel-rule-violation", "title": "Channel rule violation",
+  "status": 400, "detail": "…", "instance": "/notifications",
+  "errors": [{ "field": "payload.recipient", "message": "…" }] }
 ```
 
-**`send()` es concreto a propósito, no abstracto.** Es la invariante del contrato: todo canal valida antes de formatear y formatea antes de registrar. Si `send()` fuera abstracto, una subclase podría registrar un envío que nunca se validó, rompiendo LSP sin romper la compilación. Los **pasos** son los abstractos; el **orden** no se negocia. Hay un test que lo fija.
+## Reglas de dominio observables
 
-`deliver()` es un *hook*: método opcional con default no-op, a diferencia de los abstractos que son obligatorios. Marca el punto exacto donde entraría SendGrid/Twilio/FCM. Este proyecto simula el envío, así que hoy ninguna subclase lo sobrescribe.
+- Estados de una notificación: `pending` → `sent` | `failed`. Un `failed` editado vuelve a `pending` y se reenvía. `sent` es terminal ([ADR-009](../docs/adr/009-transiciones-de-notification.md)).
+- **Solo se edita una notificación `failed`**; en otro estado, `PATCH` responde 409. Editar implica reenviar ([ADR-007](../docs/adr/007-solo-editar-failed.md)). El canal no cambia nunca: para otro canal, se crea otra notificación.
+- Borrar se permite en cualquier estado.
+- Una notificación inexistente o de otro usuario responde **404, no 403**, para no revelar su existencia.
+- Reglas por canal ([ADR-010](../docs/adr/010-reglas-de-canal.md)): email requiere dirección válida; **SMS** requiere teléfono E.164 y `content` de **160 caracteres como máximo (se rechaza, no se trunca)**; push requiere un device token con formato válido. Un payload inválido es 400 y no escribe nada.
+- Si el payload es válido pero la entrega falla, la respuesta es **201 con `status: "failed"`** (`attempts`, `errorMessage`), no un error HTTP.
+- `attempts` aumenta en cada intento de entrega.
 
-**Agregar un canal nuevo no toca la lógica de despacho ni el service.** Sí toca la composición del módulo, que es donde se declara qué senders existen:
+## Flujo de envío sin transacción abierta ([ADR-008](../docs/adr/008-sin-transaccion-en-entrega.md))
 
-1. Crear la clase que extiende `BaseNotificationSender` (con su `payloadDto` si necesita datos extra).
-2. Registrarla en `providers` y en el array del `useFactory` de `NotificationsModule`.
+Create y Revise comparten el mismo final (`DeliverNotification`): validar con la política del canal, guardar `pending` (commit), entregar por el gateway, `markSent`/`markFailed` y guardar de nuevo (commit). Nunca hay una transacción abierta durante la entrega, así que `pending` es el estado recuperable si el proceso cae entre ambos commits. Un gateway que lanza una excepción cuenta como entrega fallida.
 
-Nada de `switch (channel)` en el service, el dispatcher ni la validación.
+## Canales y gateways simulados
 
-### Validación por canal sin condicionales
+Cada canal tiene una **política** en el dominio (valida y formatea, sin I/O) y un **gateway** en infraestructura (entrega) ([ADR-005](../docs/adr/005-politica-vs-gateway.md)). Hoy los gateways son simulados y deterministas para poder probar `failed` y la edición ([ADR-012](../docs/adr/012-adaptadores-de-notificaciones.md)):
 
-Cada sender aporta dos cosas:
+| Canal | Falla si el destinatario… |
+|---|---|
+| email, push | en minúsculas contiene `fail` |
+| sms | termina en `0000` |
 
-- `payloadDto` — el DTO que describe lo que espera en `metadata`.
-- `validateDraft(draft)` — reglas que miran la notificación entera, para lo que no entra en un DTO de metadata (el límite de 160 del SMS mira `content`, que es común a todos los canales).
+En cualquier otro caso la entrega es exitosa. Un fallo guarda `Simulated delivery failure` como `errorMessage`, y cada entrega queda en el log. Editar el destinatario a uno válido convierte un `failed` en `sent`.
 
-`NotificationDispatcherService.validateDraft()` resuelve el sender por el mapa que ya usaba para despachar y aplica ambos. El canal trae su propio contrato; el dispatcher solo lo ejecuta.
+### Agregar un canal (p. ej. WhatsApp)
 
-### Inversión de dependencias con tokens
+1. `domain/channels/whatsapp.policy.ts`: implementa `ChannelPolicy` (validación y `OutboundMessage`).
+2. Un gateway que implemente `ChannelGateway` en `infrastructure/channels/`.
+3. Registrar ambos en `src/notifications.module.ts` (`ChannelPolicyRegistry` y `createSimulatedGateways`/registro de gateways).
 
-Las interfaces de TypeScript se borran al compilar, así que no sirven como token de inyección. Sin un `Symbol` de por medio, un controller no tiene más remedio que pedir la clase concreta — y entonces la interfaz no invierte nada: es una *header interface*, ceremonia sin sustituibilidad.
+No cambian los casos de uso, los controllers, los DTOs ni las migraciones: `channel` es un `varchar` y el registro decide qué canales existen ([ADR-004](../docs/adr/004-channel-varchar-y-registro.md)). No debe haber `if` ni `switch` por canal fuera de ese registro.
 
-Por eso `NOTIFICATION_SERVICE` y `USER_SERVICE`. El módulo es el único lugar que conoce la clase concreta; los controllers compilan contra `NotificationInterface` / `UserInterface` y un test puede pasarles un fake sin tocar TypeORM.
+## Seguridad ([ADR-014](../docs/adr/014-adaptadores-de-auth.md), [ADR-013](../docs/adr/013-dominio-y-casos-de-uso-de-auth.md))
 
-### Transacciones (y su límite)
+- **Contraseñas:** bcrypt (coste 10). bcrypt solo lee 72 bytes y el contrato admite 128 caracteres, así que si la contraseña supera 72 bytes UTF-8 se aplica antes sha256 → base64.
+- **JWT sin estado:** HS256 con `sub`, `iat`, `exp` y `type: "access"`. El guard valida firma, expiración y tipo sin consultar la base; solo `/auth/me` carga al usuario.
+- **Reseteo de contraseña:** el token en claro nunca se guarda ni se loguea; se persiste su sha256. Uso único (`UPDATE … WHERE used_at IS NULL`, seguro bajo concurrencia) y vigencia de `RESET_TOKEN_EXPIRES_MINUTES`. En producción todavía no hay canal que entregue el token (falta un gateway de email).
+- **Anti-enumeración:** `password-reset/request` responde igual exista o no el email; `login` responde igual ante email inexistente o contraseña errónea, y verifica contra un hash señuelo para no filtrar por tiempo.
+- **Rate limit:** `POST /auth/login` y `POST /auth/password-reset/request`, 5 por minuto por IP, con 429. El contador vive en memoria: **es por proceso**, válido para una sola instancia. Hay además un techo global laxo de 100 peticiones por minuto por IP.
+- helmet activo (sin CSP, para que cargue Swagger UI) y body limitado a 1 MB.
 
-La creación corre dentro de `dataSource.transaction()`: guardado + intento de envío + actualización de estado, atómico.
+## Base de datos
 
-**Esto se sostiene porque los senders son simulados.** Con un proveedor real nunca se mantiene una transacción abierta sobre una llamada de red: bloquea una conexión del pool durante todo el round-trip y un timeout del proveedor se lleva puesta la transacción. La forma correcta ahí es *commit en `PENDING` → dispatch → update del estado*, o directamente un outbox si hace falta garantía de entrega. `PENDING` existe justamente para ser un estado recuperable.
+Esquema en la sección 5 del diseño: `users`, `password_reset_tokens` y `notifications`, con columnas en snake_case (nombres explícitos en las entidades), FK con `ON DELETE CASCADE` e índice `(user_id, created_at desc, id desc)`. Las migraciones conservan datos existentes y tienen `down`.
 
-La validación del payload, en cambio, corre **fuera y antes** de la transacción: si el canal rechaza el payload es un 400, y la base nunca se entera.
+## Tests
 
-### Resultado del envío en la misma tabla
-
-El estado del envío vive en `Notification` (`status`, `sentAt`, `errorMessage`), no en una entidad de log separada: no se requieren múltiples intentos ni auditoría histórica para este alcance.
-
-Un envío fallido devuelve **201 con `status: "failed"`**, no un 5xx: la notificación se creó correctamente, lo que falló fue la entrega. El motivo queda en `errorMessage` y en el log. Los errores que sí son culpa del request (payload inválido) se atajan antes y devuelven 400.
-
-### Enums en vez de strings libres
-
-`channel` y `status` usan enums de TypeORM en vez de `string` — la base rechaza valores fuera del set permitido. Los tres canales son fijos y conocidos de antemano; una tabla aparte se justificaría solo si el negocio pudiera agregar canales dinámicamente.
-
-### Seguridad
-
-- **helmet** con `contentSecurityPolicy: false` (la CSP rompe el UI de Swagger, que carga assets inline).
-- **Throttler**: techo global de 100 req/min, y 5/min en `login` y `reset-password/request`.
-- **Anti-enumeración**: `/auth/reset-password/request` responde lo mismo exista o no el email. Antes devolvía 404 cuando no existía, o sea que servía para averiguar qué direcciones están registradas.
-- **Token de reseteo hasheado**: se persiste `sha256(token)` y se devuelve el crudo. Una filtración de la tabla deja de ser account takeover.
-- El `resetToken` viaja en la respuesta HTTP **solo fuera de producción**, para poder probar el flujo sin servidor de mail. En producción se omite y la respuesta es idéntica en ambos casos.
-
-### Docker
-
-**Imagen multi-stage.** Tres etapas: `deps` instala solo dependencias de producción, `build` instala todo y compila TypeScript, y `runtime` copia únicamente `node_modules` de producción y `dist`. La imagen final no lleva compiladores, ni `devDependencies`, ni código fuente.
-
-**Debian slim y no Alpine.** `bcrypt` es un módulo nativo y publica *prebuilds* para glibc, no para musl. Con Alpine hay que compilarlo en cada build: más lento y más frágil. La diferencia de tamaño no justifica esa fricción acá.
-
-**Corre como usuario `node`, no como root.** Ser root dentro del contenedor no aporta nada y agranda el radio de un escape.
-
-**Las migraciones son un servicio aparte**, no un `entrypoint` de la app. La app declara `depends_on: migrate` con `condition: service_completed_successfully`, así que no acepta tráfico hasta que las migraciones terminaron **bien**. Un `depends_on` común solo espera a que el contenedor arranque, no a que el esquema esté listo. Además, con el job separado las migraciones corren una sola vez aunque se escalen réplicas de la app.
-
-**Red propia y explícita** (`notifications`) en vez de la que compose crea sola: los servicios se resuelven por nombre y quedan aislados de otros proyectos en el mismo daemon.
-
-**Perfil `full`.** Los servicios `app` y `migrate` están detrás de un profile para que `docker compose up -d` siga levantando solo la base — que es el flujo de desarrollo, con la app corriendo por `npm run start:dev` y hot reload.
-
-### Deuda conocida
-
-- `JwtStrategy.validate()` no verifica que el usuario siga existiendo: un token sigue siendo válido hasta que expira aunque se borre la cuenta. Evitarlo cuesta una query por request; con `expiresIn: 1h` la ventana es acotada.
-- El throttler usa el storage en memoria, que no sirve con más de una instancia. Con varias réplicas hay que moverlo a Redis.
-- `configuration.ts` cae a un `JWT_SECRET` por defecto si la variable está vacía. En desarrollo es cómodo; ahora que existe una imagen con `NODE_ENV=production`, lo correcto sería **fallar al arrancar** en vez de firmar tokens con un secreto conocido.
+| Comando | Qué cubre | Requiere |
+|---|---|---|
+| `npm test` | Unitarios: dominio, casos de uso con fakes en memoria, mappers, DTOs, filtro de Problem Details, adaptadores de seguridad, forma del OpenAPI | Nada (sin base de datos) |
+| `npm run test:e2e` | HTTP de punta a punta con la app real (`/auth/*`, `/notifications`) y la migración del esquema de auth | Postgres levantado y **migrado** (`docker compose up -d` + `npm run migration:run`) con las variables de `.env`. La prueba de migración crea y borra una base temporal, por lo que el usuario necesita permiso `CREATEDB`. |

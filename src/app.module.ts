@@ -3,7 +3,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { DataSource } from 'typeorm';
 
 import { AuthModule } from './auth.module';
 import { NotificationsModule } from './notifications.module';
@@ -53,6 +52,4 @@ import { createValidationPipe } from './api/request-validation';
     },
   ],
 })
-export class AppModule {
-  constructor(private dataSource: DataSource) {}
-}
+export class AppModule {}

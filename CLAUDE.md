@@ -9,7 +9,7 @@ NestJS · TypeScript · TypeORM · PostgreSQL · Passport + JWT · bcrypt · hel
 ## Comandos
 
 ```bash
-docker compose up -d                       # solo Postgres (:5432)
+docker compose up -d                       # solo Postgres (puerto DB_PORT del .env)
 npm run start:dev                          # app en :3000, Swagger en /docs
 npm run lint                               # eslint --fix
 npm test                                   # unitarios, sin base de datos
@@ -20,14 +20,14 @@ npm run migration:revert
 docker compose --profile full up -d --build   # todo containerizado (db + migrate + app)
 ```
 
-## Estructura objetivo (hexagonal)
+## Estructura (hexagonal)
 
 ```
 src/
   domain/           # User, Notification, PasswordResetToken, ChannelPolicy, errores. Sin @nestjs ni typeorm.
   application/      # casos de uso + puertos (interfaces + tokens Symbol)
   infrastructure/
-    persistence/    # entidades TypeORM, mappers, repositorios, migraciones
+    persistence/    # entidades TypeORM, mappers, repositorios (las migraciones viven en src/migrations/)
     channels/       # ChannelGateway por canal (simulados)
     security/       # BcryptHasher, JwtTokenIssuer
   api/              # controllers, DTOs (class-validator), filtro de Problem Details
@@ -41,13 +41,6 @@ src/
 - Los DTOs de `class-validator` viven solo en `api/`; el dominio valida sus propias invariantes.
 - Las migraciones se generan y se revisan a mano; nunca se usa `synchronize: true`.
 
-## Pendiente respecto al diseño
+## Estado respecto al diseño
 
-Ver la sección 7 de `../docs/diseno-notificaciones.md`:
-- Rutas de auth: `register` y `password-reset`.
-- `metadata` → `payload.recipient`.
-- `channel` como varchar.
-- Token de reseteo en tabla aparte.
-- Problem Details.
-- Columna `attempts`.
-- Regla de `PATCH` (solo `failed`, con reenvío).
+Sin pendientes: el stack implementa el diseño completo (notificaciones y auth) y cumple `../contract/openapi.yaml`. Las decisiones están en `../docs/adr/` (001–014). Si el diseño cambia, se corrige primero allí.

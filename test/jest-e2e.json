@@ -6,6 +6,5 @@
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   },
-  "//": "El codigo usa imports absolutos tipo 'src/entities/...', que en runtime resuelve tsconfig-paths. Jest necesita que le digan donde buscar.",
   "modulePaths": ["<rootDir>/../"]
 }
