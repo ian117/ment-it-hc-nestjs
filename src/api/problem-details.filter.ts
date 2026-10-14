@@ -174,7 +174,10 @@ export function describeException(exception: unknown): Described {
     if (status === 400 && MALFORMED_JSON.test(httpDetail(exception))) {
       return malformedBody();
     }
-    return { status, ...generic(status), detail: httpDetail(exception) };
+    // El texto de ThrottlerException nombra una clase interna: detail fijo.
+    const detail =
+      status === 429 ? 'Rate limit exceeded' : httpDetail(exception);
+    return { status, ...generic(status), detail };
   }
   // unique_violation: sin este mapeo se escaparía como 500.
   if (

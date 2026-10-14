@@ -221,3 +221,11 @@ describe('ProblemDetailsFilter', () => {
     expect(logError).toHaveBeenCalled();
   });
 });
+
+describe('describeException 429', () => {
+  it('no filtra el nombre de la clase interna en detail', () => {
+    expect(describeException(new ThrottlerException()).detail).toBe(
+      'Rate limit exceeded',
+    );
+  });
+});
