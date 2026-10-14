@@ -9,7 +9,7 @@ import {
   LIST_MY_NOTIFICATIONS,
   REVISE_NOTIFICATION,
 } from '../application/tokens';
-import { JwtAuthGuard } from '../auth/user/jwt-auth.guard';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { NotificationsController } from './notifications.controller';
 
 /** El documento que publica Swagger debe coincidir con contract/openapi.yaml. */

@@ -7,7 +7,7 @@ import {
   PrimaryColumn,
 } from 'typeorm';
 
-import { User } from '../../entities/user.entity';
+import { UserOrmEntity } from './user.orm.entity';
 
 /**
  * Entidad ORM de `notifications` (diseño 5, ADR-012). Nunca sale de
@@ -25,9 +25,12 @@ export class NotificationOrmEntity {
   @Column({ name: 'user_id', type: 'uuid' })
   ownerId!: string;
 
-  @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'user_id' })
-  user?: User;
+  @ManyToOne(() => UserOrmEntity, { nullable: false, onDelete: 'CASCADE' })
+  @JoinColumn({
+    name: 'user_id',
+    foreignKeyConstraintName: 'FK_notifications_user',
+  })
+  user?: UserOrmEntity;
 
   @Column({ type: 'varchar', length: 255 })
   title!: string;

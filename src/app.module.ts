@@ -5,7 +5,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 
-import { AuthModule } from './auth/auth.module';
+import { AuthModule } from './auth.module';
 import { NotificationsModule } from './notifications.module';
 
 import { AppController } from './app.controller';

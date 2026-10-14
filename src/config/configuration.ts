@@ -1,3 +1,8 @@
+function positiveInt(raw: string | undefined, fallback: number): number {
+  const value = parseInt(raw ?? '', 10);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
 export default () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   port: parseInt(process.env.PORT ?? '3000', 10) || 3000,
@@ -10,6 +15,10 @@ export default () => ({
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'randomword',
-    expiresIn: process.env.JWT_EXPIRES_IN || '1h',
+    expiresInSeconds: positiveInt(process.env.JWT_EXPIRES_IN_SECONDS, 3600),
   },
+  resetTokenExpiresMinutes: positiveInt(
+    process.env.RESET_TOKEN_EXPIRES_MINUTES,
+    15,
+  ),
 });

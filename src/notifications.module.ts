@@ -31,10 +31,9 @@ import { EmailPolicy } from './domain/channels/email.policy';
 import { PushPolicy } from './domain/channels/push.policy';
 import { SmsPolicy } from './domain/channels/sms.policy';
 import { createSimulatedGateways } from './infrastructure/channels/simulated-gateways';
-import { SystemClock } from './infrastructure/clock/system-clock';
-import { UuidIdGenerator } from './infrastructure/ids/uuid-id-generator';
 import { NotificationOrmEntity } from './infrastructure/persistence/notification.orm.entity';
 import { TypeOrmNotificationRepository } from './infrastructure/persistence/typeorm-notification.repository';
+import { CommonModule } from './common.module';
 
 const POLICY_REGISTRY = Symbol('ChannelPolicyRegistry');
 const GATEWAY_REGISTRY = Symbol('ChannelGatewayRegistry');
@@ -45,11 +44,9 @@ const DELIVER_NOTIFICATION = Symbol('DeliverNotification');
  * concretas. Agregar un canal = su política + su gateway, registrados aquí.
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([NotificationOrmEntity])],
+  imports: [CommonModule, TypeOrmModule.forFeature([NotificationOrmEntity])],
   controllers: [NotificationsController],
   providers: [
-    { provide: CLOCK, useFactory: () => new SystemClock() },
-    { provide: ID_GENERATOR, useFactory: () => new UuidIdGenerator() },
     {
       provide: NOTIFICATION_REPOSITORY,
       useFactory: (repo: Repository<NotificationOrmEntity>) =>

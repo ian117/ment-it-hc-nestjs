@@ -11,10 +11,15 @@ import { QueryFailedError } from 'typeorm';
 
 import {
   ChannelRuleViolation,
+  EmailAlreadyRegistered,
   FieldViolation,
+  InvalidCredentials,
+  InvalidEmail,
+  InvalidResetToken,
   NotificationNotEditable,
   NotificationNotFound,
   UnknownChannel,
+  UserNotFound,
 } from '../domain/errors';
 import { RequestValidationError } from './request-validation';
 
@@ -115,6 +120,42 @@ export function describeException(exception: unknown): Described {
       title: 'Channel rule violation',
       detail: exception.message,
       errors: exception.violations,
+    };
+  }
+  if (exception instanceof EmailAlreadyRegistered) {
+    return {
+      status: 409,
+      slug: 'email-already-registered',
+      title: 'Email already registered',
+      detail: 'Email already registered',
+    };
+  }
+  if (exception instanceof InvalidCredentials) {
+    return {
+      status: 401,
+      ...generic(401),
+      detail: 'Invalid credentials',
+    };
+  }
+  // Token válido de un usuario que ya no existe (solo /auth/me lo consulta).
+  if (exception instanceof UserNotFound) {
+    return { status: 401, ...generic(401), detail: 'Invalid token' };
+  }
+  if (exception instanceof InvalidResetToken) {
+    return {
+      status: 400,
+      slug: 'invalid-reset-token',
+      title: 'Invalid reset token',
+      detail: 'Invalid, expired or already used token',
+    };
+  }
+  if (exception instanceof InvalidEmail) {
+    return {
+      status: 400,
+      slug: 'validation-error',
+      title: 'Validation failed',
+      detail: 'Request validation failed',
+      errors: [{ field: 'email', message: exception.message }],
     };
   }
   if (exception instanceof RequestValidationError) {

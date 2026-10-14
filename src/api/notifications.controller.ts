@@ -34,9 +34,9 @@ import type { DeleteNotification } from '../application/use-cases/delete-notific
 import type { GetMyNotification } from '../application/use-cases/get-my-notification';
 import type { ListMyNotifications } from '../application/use-cases/list-my-notifications';
 import type { ReviseNotification } from '../application/use-cases/revise-notification';
-import type { AuthenticatedUser } from '../auth/user/authenticated-user.interface';
-import { JwtAuthGuard } from '../auth/user/jwt-auth.guard';
-import { CurrentUser } from '../decorators/current-user.decorator';
+import type { AuthenticatedUser } from './auth/authenticated-user';
+import { CurrentUser } from './auth/current-user.decorator';
+import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { ListNotificationsQuery } from './dto/list-notifications.query';
 import { ReviseNotificationDto } from './dto/revise-notification.dto';

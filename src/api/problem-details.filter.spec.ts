@@ -11,9 +11,14 @@ import { ThrottlerException } from '@nestjs/throttler';
 
 import {
   ChannelRuleViolation,
+  EmailAlreadyRegistered,
+  InvalidCredentials,
+  InvalidEmail,
+  InvalidResetToken,
   NotificationNotEditable,
   NotificationNotFound,
   UnknownChannel,
+  UserNotFound,
 } from '../domain/errors';
 import {
   describeException,
@@ -50,6 +55,21 @@ describe('describeException', () => {
       'validation-error',
       'Validation failed',
     ],
+    [
+      new EmailAlreadyRegistered(),
+      409,
+      'email-already-registered',
+      'Email already registered',
+    ],
+    [new InvalidCredentials(), 401, 'unauthorized', 'Unauthorized'],
+    [new UserNotFound('x'), 401, 'unauthorized', 'Unauthorized'],
+    [
+      new InvalidResetToken(),
+      400,
+      'invalid-reset-token',
+      'Invalid reset token',
+    ],
+    [new InvalidEmail(), 400, 'validation-error', 'Validation failed'],
     [new UnauthorizedException(), 401, 'unauthorized', 'Unauthorized'],
     [new ThrottlerException(), 429, 'too-many-requests', 'Too many requests'],
     [new NotFoundException('Cannot GET /x'), 404, 'not-found', 'Not found'],
@@ -70,6 +90,22 @@ describe('describeException', () => {
     expect(describeException(new NotificationNotEditable()).detail).toBe(
       'Only failed notifications can be edited',
     );
+  });
+
+  it.each([
+    [new EmailAlreadyRegistered(), 'Email already registered'],
+    [new InvalidCredentials(), 'Invalid credentials'],
+    [new UserNotFound('secret-id'), 'Invalid token'],
+    [new InvalidResetToken(), 'Invalid, expired or already used token'],
+  ])('%j tiene el detail del ADR-014', (error, detail) => {
+    expect(describeException(error).detail).toBe(detail);
+    expect(describeException(error).errors).toBeUndefined();
+  });
+
+  it('InvalidEmail reporta errors[email]', () => {
+    expect(describeException(new InvalidEmail()).errors).toEqual([
+      { field: 'email', message: 'Invalid email address' },
+    ]);
   });
 
   it('unknown-channel incluye errors[channel]', () => {

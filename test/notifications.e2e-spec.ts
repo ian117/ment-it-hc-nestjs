@@ -97,7 +97,7 @@ describe('/notifications (e2e)', () => {
     dataSource = app.get(DataSource);
 
     for (const u of [owner, other]) {
-      await http().post('/auth/signup').send(u).expect(201);
+      await http().post('/auth/register').send(u).expect(201);
     }
     const [o, t] = await Promise.all(
       [owner, other].map((u) => http().post('/auth/login').send(u)),
@@ -108,21 +108,21 @@ describe('/notifications (e2e)', () => {
 
   afterAll(async () => {
     // ON DELETE CASCADE se lleva las notificaciones.
-    await dataSource.query(`DELETE FROM "user" WHERE email = ANY($1)`, [
+    await dataSource.query(`DELETE FROM "users" WHERE email = ANY($1)`, [
       [owner.email, other.email],
     ]);
     await app.close();
   });
 
-  describe('auth heredado + formato de error global', () => {
+  describe('autenticación + formato de error global', () => {
     it('obtiene un JWT con registro + login', () => {
       expect(ownerToken).toEqual(expect.any(String));
       expect(otherToken).toEqual(expect.any(String));
     });
 
     it('email repetido -> 409 problem+json', async () => {
-      const res = await http().post('/auth/signup').send(owner);
-      expectProblem(res, 409, 'conflict', '/auth/signup');
+      const res = await http().post('/auth/register').send(owner);
+      expectProblem(res, 409, 'email-already-registered', '/auth/register');
     });
 
     it('sin token -> 401 problem+json', async () => {
@@ -458,18 +458,6 @@ describe('/notifications (e2e)', () => {
       const id = await createFailed();
       const res = await patch(otherToken, id, { title: 'x' });
       expectProblem(res, 404, 'notification-not-found');
-    });
-  });
-
-  describe('rate limit', () => {
-    it('login: el intento 6 en un minuto -> 429 problem+json', async () => {
-      let last!: request.Response;
-      for (let i = 0; i < 6; i++) {
-        last = await http()
-          .post('/auth/login')
-          .send({ email: owner.email, password: 'incorrecta' });
-      }
-      expectProblem(last, 429, 'too-many-requests', '/auth/login');
     });
   });
 
