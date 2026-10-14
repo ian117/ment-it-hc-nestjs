@@ -3,7 +3,7 @@ import {
   NotificationNotEditable,
 } from './errors';
 
-export type ChannelName = 'email' | 'sms' | 'push';
+export type ChannelName = string;
 
 export const NotificationStatus = {
   PENDING: 'pending',
