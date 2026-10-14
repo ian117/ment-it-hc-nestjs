@@ -296,6 +296,31 @@ describe('Notification', () => {
     });
   });
 
+  describe('ensureEditable', () => {
+    it('no lanza desde failed', () => {
+      expect(() => crearFallida().ensureEditable()).not.toThrow();
+    });
+
+    it('lanza NotificationNotEditable desde pending', () => {
+      expect(() => crearPendiente().ensureEditable()).toThrow(
+        NotificationNotEditable,
+      );
+    });
+
+    it('lanza NotificationNotEditable desde sent', () => {
+      expect(() => crearEnviada().ensureEditable()).toThrow(
+        NotificationNotEditable,
+      );
+    });
+
+    it('no modifica la entidad', () => {
+      const n = crearEnviada();
+      expect(() => n.ensureEditable()).toThrow();
+      expect(n.status).toBe('sent');
+      expect(n.updatedAt).toEqual(T1);
+    });
+  });
+
   describe('canal inmutable', () => {
     it('revise no cambia el canal', () => {
       const n = crearFallida();

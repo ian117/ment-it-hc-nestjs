@@ -6,6 +6,18 @@ export class NotificationNotEditable extends Error {
   }
 }
 
+export class NotificationNotFound extends Error {
+  constructor(readonly notificationId?: string) {
+    super(
+      notificationId
+        ? `Notification not found: ${notificationId}`
+        : 'Notification not found',
+    );
+    this.name = 'NotificationNotFound';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
 export class InvalidNotificationTransition extends Error {
   constructor(message = 'Invalid notification state transition') {
     super(message);

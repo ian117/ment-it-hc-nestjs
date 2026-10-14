@@ -128,10 +128,15 @@ export class Notification {
     this.props.updatedAt = new Date(at);
   }
 
-  revise(changes: NotificationChanges, at: Date): void {
+  /** Una sola regla de edición: solo `failed` es editable. */
+  ensureEditable(): void {
     if (this.props.status !== NotificationStatus.FAILED) {
       throw new NotificationNotEditable();
     }
+  }
+
+  revise(changes: NotificationChanges, at: Date): void {
+    this.ensureEditable();
     if (changes.title !== undefined) this.props.title = changes.title;
     if (changes.content !== undefined) this.props.content = changes.content;
     if (changes.recipient !== undefined)
