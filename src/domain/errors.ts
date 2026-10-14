@@ -53,3 +53,43 @@ export class UnknownChannel extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+
+export class InvalidEmail extends Error {
+  constructor(message = 'Invalid email address') {
+    super(message);
+    this.name = 'InvalidEmail';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class EmailAlreadyRegistered extends Error {
+  constructor(message = 'Email already registered') {
+    super(message);
+    this.name = 'EmailAlreadyRegistered';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class InvalidCredentials extends Error {
+  constructor(message = 'Invalid credentials') {
+    super(message);
+    this.name = 'InvalidCredentials';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class InvalidResetToken extends Error {
+  constructor(message = 'Invalid or expired reset token') {
+    super(message);
+    this.name = 'InvalidResetToken';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class UserNotFound extends Error {
+  constructor(readonly userId?: string) {
+    super(userId ? `User not found: ${userId}` : 'User not found');
+    this.name = 'UserNotFound';
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

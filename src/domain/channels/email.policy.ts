@@ -1,8 +1,6 @@
+import { EMAIL_PATTERN, MAX_EMAIL_LENGTH } from '../email';
 import { ChannelRuleViolation } from '../errors';
 import { ChannelDraft, ChannelPolicy, OutboundMessage } from './channel-policy';
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const MAX_EMAIL_LENGTH = 320;
 
 const HTML_ESCAPES: Record<string, string> = {
   '&': '&amp;',
