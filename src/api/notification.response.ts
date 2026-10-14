@@ -1,18 +1,65 @@
+import { ApiProperty } from '@nestjs/swagger';
+
 import { Notification } from '../domain/notification';
+import { ChannelPayloadDto } from './dto/create-notification.dto';
+import { ApiSchemaOf } from './swagger-schema';
 
 /** Forma JSON (camelCase) de `Notification` en el contrato. Sin userId. */
-export interface NotificationResponse {
-  id: string;
-  title: string;
-  content: string;
-  channel: string;
-  payload: { recipient: string };
-  status: string;
-  attempts: number;
-  errorMessage: string | null;
-  sentAt: string | null;
-  createdAt: string;
-  updatedAt: string;
+@ApiSchemaOf('Notification')
+export class NotificationResponse {
+  @ApiProperty({ format: 'uuid' })
+  id!: string;
+
+  @ApiProperty()
+  title!: string;
+
+  @ApiProperty()
+  content!: string;
+
+  @ApiProperty({
+    example: 'sms',
+    description: 'Canal de entrega. Valores conocidos: email, sms, push.',
+  })
+  channel!: string;
+
+  @ApiProperty({ type: ChannelPayloadDto })
+  payload!: ChannelPayloadDto;
+
+  @ApiProperty({
+    enum: ['pending', 'sent', 'failed'],
+    enumName: 'NotificationStatus',
+  })
+  status!: string;
+
+  @ApiProperty({ type: 'integer', minimum: 0 })
+  attempts!: number;
+
+  @ApiProperty({ type: String, nullable: true })
+  errorMessage!: string | null;
+
+  @ApiProperty({ type: String, format: 'date-time', nullable: true })
+  sentAt!: string | null;
+
+  @ApiProperty({ format: 'date-time' })
+  createdAt!: string;
+
+  @ApiProperty({ format: 'date-time' })
+  updatedAt!: string;
+}
+
+@ApiSchemaOf('NotificationPage')
+export class NotificationPageResponse {
+  @ApiProperty({ type: [NotificationResponse] })
+  data!: NotificationResponse[];
+
+  @ApiProperty({ type: 'integer', minimum: 0 })
+  total!: number;
+
+  @ApiProperty({ type: 'integer', minimum: 1 })
+  page!: number;
+
+  @ApiProperty({ type: 'integer', minimum: 1, maximum: 100 })
+  limit!: number;
 }
 
 export function toNotificationResponse(n: Notification): NotificationResponse {

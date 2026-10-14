@@ -9,6 +9,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { ApiSchemaOf } from '../swagger-schema';
 import { ChannelPayloadDto } from './create-notification.dto';
 
 /**
@@ -16,15 +17,20 @@ import { ChannelPayloadDto } from './create-notification.dto';
  * Un `null` explícito es 400 (el contrato no admite null), por eso
  * ValidateIf(!== undefined) y no IsOptional (que también saltea null).
  */
+@ApiSchemaOf('ReviseNotificationRequest', {
+  additionalProperties: false,
+  minProperties: 1,
+  description: 'Todos opcionales; `channel` no se acepta.',
+})
 export class ReviseNotificationDto {
-  @ApiPropertyOptional({ maxLength: 255 })
+  @ApiPropertyOptional({ minLength: 1, maxLength: 255 })
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   title?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ minLength: 1 })
   @ValidateIf((_, value) => value !== undefined)
   @IsString()
   @IsNotEmpty()

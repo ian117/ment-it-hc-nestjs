@@ -9,27 +9,37 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { ApiSchemaOf } from '../swagger-schema';
+
+@ApiSchemaOf('ChannelPayload', { additionalProperties: false })
 export class ChannelPayloadDto {
-  @ApiProperty({ example: '+5219611234567' })
+  @ApiProperty({ example: '+5219611234567', minLength: 1 })
   @IsString()
   @IsNotEmpty()
   recipient!: string;
 }
 
+@ApiSchemaOf('CreateNotificationRequest', { additionalProperties: false })
 export class CreateNotificationDto {
-  @ApiProperty({ maxLength: 255 })
+  @ApiProperty({ minLength: 1, maxLength: 255 })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   title!: string;
 
-  @ApiProperty()
+  @ApiProperty({ minLength: 1 })
   @IsString()
   @IsNotEmpty()
   content!: string;
 
   /** Solo string no vacío: el registro de canales decide si existe (ADR-004). */
-  @ApiProperty({ example: 'sms', maxLength: 32 })
+  @ApiProperty({
+    example: 'sms',
+    minLength: 1,
+    maxLength: 32,
+    description:
+      'Canal de entrega (string abierto, lo resuelve el registro de canales). Valores conocidos: email, sms, push.',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(32)
