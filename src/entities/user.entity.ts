@@ -4,10 +4,7 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
 } from 'typeorm';
-
-import { Notification } from './notification.entity';
 
 @Entity()
 export class User {
@@ -37,9 +34,6 @@ export class User {
     select: false,
   })
   resetPasswordExpires!: Date | null;
-
-  @OneToMany(() => Notification, (notification) => notification.user)
-  notifications?: Notification[];
 
   @CreateDateColumn()
   createdAt!: Date;

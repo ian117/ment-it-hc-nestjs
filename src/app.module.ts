@@ -1,4 +1,4 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
@@ -6,14 +6,15 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { DataSource } from 'typeorm';
 
 import { AuthModule } from './auth/auth.module';
-import { NotificationsModule } from './notifications/notifications.module';
+import { NotificationsModule } from './notifications.module';
 
 import { AppController } from './app.controller';
 
 import { AppService } from './app.service';
 
 import configuration from './config/configuration';
-import { AllExceptionsFilter } from './filters/all-exceptions.filter';
+import { ProblemDetailsFilter } from './api/problem-details.filter';
+import { createValidationPipe } from './api/request-validation';
 
 @Module({
   imports: [
@@ -44,15 +45,11 @@ import { AllExceptionsFilter } from './filters/all-exceptions.filter';
   controllers: [AppController],
   providers: [
     AppService,
-    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_FILTER, useClass: ProblemDetailsFilter },
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     {
       provide: APP_PIPE,
-      useValue: new ValidationPipe({
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      }),
+      useValue: createValidationPipe(),
     },
   ],
 })
